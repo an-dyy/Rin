@@ -1,0 +1,7 @@
+poetry.lock
+test.py
+__pycache__/
+./docs/build
+.mypy_cache/
+.pytest_cache/
+dist/
