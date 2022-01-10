@@ -34,15 +34,17 @@ class Gateway:
         self.sequence = 0
 
     @classmethod
-    async def from_url(cls: type[Gateway], client: GatewayClient, url: str) -> Gateway:
+    async def from_url(cls: type[Gateway], client: GatewayClient, url: str, *, show_payload: bool = False) -> Gateway:
         sock = await client.rest.connect(url)
-        return cls(client, sock)
+        return cls(client, sock, show_payload=show_payload)
 
-    async def dispatch(self, name: str, data: DispatchData) -> None:
+    def dispatch(self, name: str, data: DispatchData) -> None:
         _log.debug(f"GATEWAY SENT: {name} {data if self.show_payload else ''}")
 
         if name == "READY":
             self.session_id = data["session_id"]
+
+        self.client.dispatcher(name.lower(), data)
 
     async def send(self, data: DispatchData | IdentifyData | ResumeData | HeartbeatData) -> None:
         _log.debug(f"SENDING GATEWAY: {data if self.show_payload else data['op']}")
@@ -65,7 +67,7 @@ class Gateway:
                     await self.send(self.identify)
 
                 elif data["op"] == OPCode.DISPATCH:
-                    await self.dispatch(data["t"], data["d"])
+                    self.dispatch(data["t"], data["d"])
 
                 elif data["op"] == OPCode.RESUME:
                     await self.send(self.resume)
