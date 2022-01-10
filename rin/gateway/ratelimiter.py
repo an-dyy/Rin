@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import typing
+from typing import Any, Coroutine
 
 __all__ = ("Ratelimiter",)
 
@@ -14,9 +14,7 @@ class Ratelimiter:
         self.rate = rate
         self.per = per
 
-    async def sleep(
-        self, command: typing.Coroutine[typing.Any, typing.Any, typing.Any]
-    ) -> None:
+    async def sleep(self, command: Coroutine[Any, Any, Any]) -> None:
         async with self.semaphore:
             await command
 

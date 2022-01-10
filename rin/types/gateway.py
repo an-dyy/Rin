@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import typing
+from typing import Any, TypedDict
 
 __all__ = ("DispatchData", "IdentifyData", "ResumeData", "HeartbeatData")
 
 
-class DispatchData(typing.TypedDict):
-    d: dict[typing.Any, typing.Any] | int
+class DispatchData(TypedDict):
+    d: dict[Any, Any] | int
     session_id: str
 
     op: int
@@ -14,16 +14,16 @@ class DispatchData(typing.TypedDict):
     t: str
 
 
-class IdentifyData(typing.TypedDict):
+class IdentifyData(TypedDict):
     op: int
     d: dict[str, str | int | dict[str, str]]
 
 
-class ResumeData(typing.TypedDict):
+class ResumeData(TypedDict):
     op: int
     d: dict[str, str | int]
 
 
-class HeartbeatData(typing.TypedDict):
+class HeartbeatData(TypedDict):
     op: int
     d: int

@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-import typing
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
 from .code import OPCode
 from .ratelimiter import Ratelimiter
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from ..client import GatewayClient
     from ..types import DispatchData, HeartbeatData, IdentifyData, ResumeData
 
@@ -57,7 +57,7 @@ class Gateway:
         sock = await client.rest.connect(url)
         return cls(client, sock, show_payload=show_payload)
 
-    def dispatch(self, name: str, data: dict[typing.Any, typing.Any]) -> None:
+    def dispatch(self, name: str, data: dict[Any, Any]) -> None:
         _log.debug(f"GATEWAY SENT: {name} {data if self.show_payload else ''}")
 
         if name == "READY":

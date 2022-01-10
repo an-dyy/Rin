@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import typing
+from typing import Any, Callable
 
 from .gateway import Dispatcher, Gateway
 from .rest import RESTClient, Route
@@ -72,11 +72,7 @@ class GatewayClient:
         return loop
 
     def subscribe(
-        self,
-        name: str,
-        func: typing.Callable[[typing.Any], typing.Any],
-        *,
-        once: bool = False
+        self, name: str, func: Callable[..., Any], *, once: bool = False
     ) -> None:
         """Used to subscribe a callback to an event.
 
@@ -96,7 +92,7 @@ class GatewayClient:
 
         self.dispatcher[(name, once)] = func
 
-    def on(self, name: None | str = None) -> typing.Callable[[typing.Any], typing.Any]:
+    def on(self, name: None | str = None) -> Callable[..., Any]:
         """Registers a callback to an event.
 
         Parameters
@@ -105,17 +101,13 @@ class GatewayClient:
             The name of the event to register to.
         """
 
-        def inner(
-            func: typing.Callable[[typing.Any], typing.Any]
-        ) -> typing.Callable[[typing.Any], typing.Any]:
+        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
             self.subscribe(name or func.__name__, func)
             return func
 
         return inner
 
-    def once(
-        self, name: None | str = None
-    ) -> typing.Callable[[typing.Any], typing.Any]:
+    def once(self, name: None | str = None) -> Callable[..., Any]:
         """Registers a onetime callback to an event.
 
         Parameters
@@ -124,9 +116,7 @@ class GatewayClient:
             The name of the event to register to.
         """
 
-        def inner(
-            func: typing.Callable[[typing.Any], typing.Any]
-        ) -> typing.Callable[[typing.Any], typing.Any]:
+        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
             self.subscribe(name or func.__name__, func, once=True)
             return func
 
@@ -142,6 +132,7 @@ class GatewayClient:
             only show if logging level is set to DEBUG.
         """
         data = await self.rest.request("GET", Route("gateway/bot"))
+
         self.gateway = await Gateway.from_url(
             self, data["url"], show_payload=show_payload
         )

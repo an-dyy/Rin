@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing
+from typing import Any
 
 import aiohttp
 
@@ -30,9 +30,7 @@ class RESTClient:
 
         return await self.session.ws_connect(url)
 
-    async def request(
-        self, method: str, route: Route, **kwargs: typing.Any
-    ) -> typing.Any:
+    async def request(self, method: str, route: Route, **kwargs: Any) -> Any:
         if not hasattr(self, "session"):
             self.session = await self._create_session()
 
