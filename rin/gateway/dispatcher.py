@@ -6,9 +6,7 @@ import typing
 
 if typing.TYPE_CHECKING:
     Listeners = collections.defaultdict[str, list[typing.Callable[[typing.Any], typing.Any]]]
-
     from ..client import GatewayClient
-    from ..types import DispatchData
 
 _log = logging.getLogger(__name__)
 
@@ -22,6 +20,7 @@ class Dispatcher:
         self.once: Listeners = collections.defaultdict(list)
 
     def __setitem__(self, event: tuple[str, bool], func: typing.Callable[[typing.Any], typing.Any]) -> None:
+        _log.debug(f"DISPATCHER: Appending {func.__name__!r} to {event}")
         name, once = event
 
         if once is not False:
@@ -30,8 +29,8 @@ class Dispatcher:
         elif once is False:
             self.listeners[name].append(func)
 
-    def __call__(self, name: str, data: DispatchData) -> None:
-        _log.debug(f"DISPATCHING: {name}")
+    def __call__(self, name: str, data: dict[typing.Any, typing.Any]) -> None:
+        _log.debug(f"DISPATCHING: {name.upper()}")
 
         name = name.lower()
         parsed = data
@@ -44,4 +43,4 @@ class Dispatcher:
             self.loop.create_task(listener(parsed))
 
         for wildcard in self.listeners["*"]:
-            self.loop.create_task(wildcard(parsed))
+            self.loop.create_task(wildcard(name, parsed))  # type: ignore

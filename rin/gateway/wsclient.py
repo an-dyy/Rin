@@ -38,7 +38,7 @@ class Gateway:
         sock = await client.rest.connect(url)
         return cls(client, sock, show_payload=show_payload)
 
-    def dispatch(self, name: str, data: DispatchData) -> None:
+    def dispatch(self, name: str, data: dict[typing.Any, typing.Any]) -> None:
         _log.debug(f"GATEWAY SENT: {name} {data if self.show_payload else ''}")
 
         if name == "READY":
