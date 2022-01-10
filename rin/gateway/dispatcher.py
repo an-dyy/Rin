@@ -5,7 +5,9 @@ import logging
 import typing
 
 if typing.TYPE_CHECKING:
-    Listeners = collections.defaultdict[str, list[typing.Callable[[typing.Any], typing.Any]]]
+    Listeners = collections.defaultdict[
+        str, list[typing.Callable[[typing.Any], typing.Any]]
+    ]
     from ..client import GatewayClient
 
 _log = logging.getLogger(__name__)
@@ -19,7 +21,9 @@ class Dispatcher:
         self.listeners: Listeners = collections.defaultdict(list)
         self.once: Listeners = collections.defaultdict(list)
 
-    def __setitem__(self, event: tuple[str, bool], func: typing.Callable[[typing.Any], typing.Any]) -> None:
+    def __setitem__(
+        self, event: tuple[str, bool], func: typing.Callable[[typing.Any], typing.Any]
+    ) -> None:
         _log.debug(f"DISPATCHER: Appending {func.__name__!r} to {event}")
         name, once = event
 

@@ -30,12 +30,17 @@ class RESTClient:
 
         return await self.session.ws_connect(url)
 
-    async def request(self, method: str, route: Route, **kwargs: typing.Any) -> typing.Any:
+    async def request(
+        self, method: str, route: Route, **kwargs: typing.Any
+    ) -> typing.Any:
         if not hasattr(self, "session"):
             self.session = await self._create_session()
 
         resp = await self.session.request(
-            method, route.endpoint, json=kwargs if kwargs else None, headers={"Authorization": f"Bot {self.token}"}
+            method,
+            route.endpoint,
+            json=kwargs if kwargs else None,
+            headers={"Authorization": f"Bot {self.token}"},
         )
 
         return await resp.json()

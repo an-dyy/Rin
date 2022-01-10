@@ -18,10 +18,23 @@ _log = logging.getLogger(__name__)
 
 
 class Gateway:
-    __slots__ = ("limiter", "client", "intents", "sock", "session_id", "sequence", "loop", "show_payload")
+    __slots__ = (
+        "limiter",
+        "client",
+        "intents",
+        "sock",
+        "session_id",
+        "sequence",
+        "loop",
+        "show_payload",
+    )
 
     def __init__(
-        self, client: GatewayClient, sock: aiohttp.ClientWebSocketResponse, *, show_payload: bool = False
+        self,
+        client: GatewayClient,
+        sock: aiohttp.ClientWebSocketResponse,
+        *,
+        show_payload: bool = False,
     ) -> None:
         self.show_payload = show_payload
         self.limiter = Ratelimiter(2, 1)
@@ -34,7 +47,13 @@ class Gateway:
         self.sequence = 0
 
     @classmethod
-    async def from_url(cls: type[Gateway], client: GatewayClient, url: str, *, show_payload: bool = False) -> Gateway:
+    async def from_url(
+        cls: type[Gateway],
+        client: GatewayClient,
+        url: str,
+        *,
+        show_payload: bool = False,
+    ) -> Gateway:
         sock = await client.rest.connect(url)
         return cls(client, sock, show_payload=show_payload)
 
@@ -46,7 +65,9 @@ class Gateway:
 
         self.client.dispatcher(name.lower(), data)
 
-    async def send(self, data: DispatchData | IdentifyData | ResumeData | HeartbeatData) -> None:
+    async def send(
+        self, data: DispatchData | IdentifyData | ResumeData | HeartbeatData
+    ) -> None:
         _log.debug(f"SENDING GATEWAY: {data if self.show_payload else data['op']}")
         await self.limiter.sleep(self.sock.send_json(data))
 

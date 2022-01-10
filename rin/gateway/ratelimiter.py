@@ -14,7 +14,9 @@ class Ratelimiter:
         self.rate = rate
         self.per = per
 
-    async def sleep(self, command: typing.Coroutine[typing.Any, typing.Any, typing.Any]) -> None:
+    async def sleep(
+        self, command: typing.Coroutine[typing.Any, typing.Any, typing.Any]
+    ) -> None:
         async with self.semaphore:
             await command
 

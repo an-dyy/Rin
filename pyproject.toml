@@ -17,7 +17,7 @@ pre-commit = "^2.16.0"
 isort = "^5.10.1"
 
 [tool.black]
-line-length = 120
+line-length = 88
 
 [tool.mypy]
 ignore_missing_imports = true
