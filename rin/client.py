@@ -56,7 +56,7 @@ class GatewayClient:
         intents: int = 1
     ) -> None:
         self.loop = loop or self._create_loop()
-        self.rest = RESTClient(token)
+        self.rest = RESTClient(token, self)
         self.intents = intents
 
         self.gateway: Gateway
@@ -122,19 +122,11 @@ class GatewayClient:
 
         return inner
 
-    async def start(self, *, show_payload: bool = False) -> None:
-        """Starts the connection.
+    async def start(self) -> None:
+        """Starts the connection."""
+        data = await self.rest.request("GET", Route("gateway/bot"), cls=Gateway)
+        self.gateway = await self.rest.connect(data["url"])
+        await self.gateway.start(self)
 
-        Parameters
-        ----------
-        show_payload: :class:`bool`
-            If payloads should be shown in debug logs. This will
-            only show if logging level is set to DEBUG.
-        """
-        data = await self.rest.request("GET", Route("gateway/bot"))
-
-        self.gateway = await Gateway.from_url(
-            self, data["url"], show_payload=show_payload
-        )
-
-        await self.gateway.read()
+        while True:
+            await asyncio.sleep(0)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 import aiohttp
 
@@ -11,98 +11,102 @@ from .code import OPCode
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
+    from rin.types import DispatchData, HeartbeatData, IdentifyData, ResumeData
+
     from ..client import GatewayClient
-    from ..types import DispatchData, HeartbeatData, IdentifyData, ResumeData
+
+    PayloadData = IdentifyData | DispatchData | ResumeData | HeartbeatData
 
 _log = logging.getLogger(__name__)
 
 
-class Gateway:
-    __slots__ = (
-        "limiter",
-        "client",
-        "intents",
-        "sock",
-        "session_id",
-        "sequence",
-        "loop",
-        "show_payload",
-    )
+class Gateway(aiohttp.ClientWebSocketResponse):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
-    def __init__(
-        self,
-        client: GatewayClient,
-        sock: aiohttp.ClientWebSocketResponse,
-        *,
-        show_payload: bool = False,
-    ) -> None:
-        self.show_payload = show_payload
-        self.limiter = Ratelimiter(2, 1)
-        self.intents = client.intents
-        self.loop = client.loop
-        self.client = client
-        self.sock = sock
+        self.ratelimiter = Ratelimiter(2, 1)
+        self.intents: int
+        self.client: GatewayClient
+
+        self.interval: float = 0
+        self.pacemaker: asyncio.Task[None]
 
         self.session_id = ""
         self.sequence = 0
 
-    @classmethod
-    async def from_url(
-        cls: type[Gateway],
-        client: GatewayClient,
-        url: str,
-        *,
-        show_payload: bool = False,
-    ) -> Gateway:
-        sock = await client.rest.connect(url)
-        return cls(client, sock, show_payload=show_payload)
+        self.callbacks: dict[int, Callable[..., Awaitable[Any]]] = {
+            int(OPCode.DISPATCH): self.send_dispatch,
+            int(OPCode.RESUME): self.send_resume,
+            int(OPCode.RECONNECT): self.reconnect,
+        }
 
-    def dispatch(self, name: str, data: dict[Any, Any]) -> None:
-        _log.debug(f"GATEWAY SENT: {name} {data if self.show_payload else ''}")
+    async def send_dispatch(self, data: dict[Any, Any]) -> None:
+        name = data["t"]
+        _log.debug(f"GATEWAY SENT: {name}")
 
         if name == "READY":
-            self.session_id = data["session_id"]
+            self.session_id = data["d"]["session_id"]
 
-        self.client.dispatcher(name.lower(), data)
+        self.client.dispatcher(name.lower(), data["d"])
 
-    async def send(
-        self, data: DispatchData | IdentifyData | ResumeData | HeartbeatData
-    ) -> None:
-        _log.debug(f"SENDING GATEWAY: {data if self.show_payload else data['op']}")
-        await self.limiter.sleep(self.sock.send_json(data))
+    async def send_resume(self, _: dict[Any, Any]) -> None:
+        return await self.send(self.resume)
 
-    async def pulse(self, interval: float) -> None:
-        while not self.sock.closed:
+    async def reconnect(self, _: dict[Any, Any]) -> None:
+        if not self._closed:
+            await self.close()
+
+        _log.debug(
+            "GATEWAY SENT RECONNECT: CLOSING WEBSOCKET"
+        )  # TODO: Actually restart
+
+    async def start(self, client: GatewayClient) -> None:
+        _log.debug("CREATING GATEWAY FROM CLIENT.")
+
+        self.client = client
+        self.intents = client.intents
+
+        data = await self.receive_json()
+        self.interval = data["d"]["heartbeat_interval"]
+        self.pacemaker = self._loop.create_task(self.pulse())
+
+        await self.send(self.identify)
+        await self.read_messages()
+
+    async def close(
+        self, *, code: int = aiohttp.WSCloseCode.OK, message: bytes = b""
+    ) -> bool:
+        if self.pacemaker is not None and not self.pacemaker.cancelled():
+            self.pacemaker.cancel()
+
+        return await super().close(code=code, message=message)
+
+    async def send(self, payload: PayloadData) -> None:
+        await self.ratelimiter.sleep(self.send_json(payload))
+        _log.debug(f"SENT GATEWAY: {payload}")
+
+    async def pulse(self) -> None:
+        while self.interval is not None and not self._closed:
             await self.send(self.heartbeat)
             self.sequence += 1
 
-            await asyncio.sleep(interval / 1000)
+            await asyncio.sleep(self.interval / 1000)
 
-    async def read(self) -> None:
-        async for message in self.sock:
+    async def read_messages(self) -> None:
+        async for message in self:
             if message.type is aiohttp.WSMsgType.TEXT:
-                data = message.json()
+                received = message.json()
 
-                if data["op"] == OPCode.HELLO:
-                    self.loop.create_task(self.pulse(data["d"]["heartbeat_interval"]))
-                    await self.send(self.identify)
+                if sequence := received.get("s"):
+                    self.sequence = sequence
 
-                elif data["op"] == OPCode.DISPATCH:
-                    self.dispatch(data["t"], data["d"])
+                if callback := self.callbacks.get(received["op"]):
+                    await callback(received)
 
-                elif data["op"] == OPCode.RESUME:
-                    await self.send(self.resume)
-
-                elif data["op"] == OPCode.RECONNECT:
-                    if not self.sock.closed:
-                        await self.sock.close()
-
-                    await self.read()
-
-                elif data["op"] == OPCode.HEARTBEAT_ACK:
+                elif received["op"] == OPCode.HEARTBEAT_ACK:
                     _log.debug("GATEWAY ACK: HEARTBEAT")
 
-        _log.debug(self.sock.close_code)
+        _log.debug(f"WEBSOCKET CLOSED WITH CODE: {self.close_code}")
 
     @property
     def identify(self) -> IdentifyData:
