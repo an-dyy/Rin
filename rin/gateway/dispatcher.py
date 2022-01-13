@@ -4,7 +4,11 @@ import collections
 import logging
 from typing import TYPE_CHECKING, Any, Callable
 
+from ..models import User
+
 if TYPE_CHECKING:
+    from rin.types import UserData
+
     from ..client import GatewayClient
 
     Listeners = collections.defaultdict[str, list[Callable[..., Any]]]
@@ -21,7 +25,9 @@ class Dispatcher:
         self.once: Listeners = collections.defaultdict(list)
 
     def __setitem__(self, event: tuple[str, bool], func: Callable[..., Any]) -> None:
-        _log.debug(f"DISPATCHER: Appending {func.__name__!r} to {event}")
+        _log.debug(
+            f"DISPATCHER: Appending {func.__name__!r} to (event={event[0]}, once={event[1]})"
+        )
         name, once = event
 
         if once is not False:
@@ -30,18 +36,28 @@ class Dispatcher:
         elif once is False:
             self.listeners[name].append(func)
 
-    def __call__(self, name: str, data: dict[Any, Any]) -> None:
+    async def __call__(self, name: str, data: dict[Any, Any]) -> None:
         _log.debug(f"DISPATCHING: {name.upper()}")
 
         name = name.lower()
-        parsed = data
+        parser = getattr(self, f"parse_{name}", self.no_parse)
+        parsed = await parser(data)
 
-        for once in self.once[name]:
+        for once in self.once[name][:]:
             self.loop.create_task(once(parsed))
-            return None
+            self.once.popitem()
 
         for listener in self.listeners[name]:
             self.loop.create_task(listener(parsed))
 
         for wildcard in self.listeners["*"]:
             self.loop.create_task(wildcard(name, parsed))
+
+    async def no_parse(self, data: dict[Any, Any]) -> dict[Any, Any]:
+        return data
+
+    async def parse_ready(self, data: dict[Any, Any]) -> User:
+        return self.create_user(data["user"])
+
+    def create_user(self, data: UserData) -> User:
+        return User(self.client, data)

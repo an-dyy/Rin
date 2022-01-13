@@ -47,7 +47,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         if name == "READY":
             self.session_id = data["d"]["session_id"]
 
-        self.client.dispatcher(name.lower(), data["d"])
+        await self.client.dispatcher(name.lower(), data["d"])
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)
