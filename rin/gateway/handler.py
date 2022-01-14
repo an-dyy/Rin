@@ -73,13 +73,11 @@ class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore
         await self.send(self.identify)
         await self.read_messages()
 
-    async def close(
-        self, *, code: int = aiohttp.WSCloseCode.OK, message: bytes = b""
-    ) -> None:
+    async def close(self, *args: Any, **kwargs: Any) -> Any:
         if self.pacemaker is not None and not self.pacemaker.cancelled():
             self.pacemaker.cancel()
 
-        await super().close(code=code, message=message)
+        return await super().close(*args, **kwargs)
 
     async def send(self, payload: PayloadData) -> None:
         await self.ratelimiter.sleep(self.send_json(payload))
