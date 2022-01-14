@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .cacheable import Cache, Cacheable
+from .cacheable import Cacheable
 
 if TYPE_CHECKING:
     from rin.types import UserData
@@ -10,9 +10,8 @@ if TYPE_CHECKING:
     from ..gateway import GatewayClient
 
 
-class User(Cacheable, type="User", max=1000):
+class User(Cacheable, max=1000):
     __slots__ = ("_client", "_data")
-    __cache__: Cache[User]
 
     def __init__(self, client: GatewayClient, data: UserData) -> None:
         self._client = client
@@ -84,3 +83,6 @@ class User(Cacheable, type="User", max=1000):
     def public_flags(self) -> int:
         flags = self._data.get("public_flags")
         return int(flags) if flags is not None else 0
+
+
+User.cache.type = User
