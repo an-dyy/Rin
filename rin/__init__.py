@@ -5,3 +5,5 @@ from .client import *
 from .gateway import *
 from .models import *
 from .rest import *
+
+RESTClient.GATEWAY_TYPE = Gateway

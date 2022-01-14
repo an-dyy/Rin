@@ -7,7 +7,9 @@ from .cacheable import Cacheable
 if TYPE_CHECKING:
     from rin.types import UserData
 
-    from ..gateway import GatewayClient
+    from ..client import GatewayClient
+
+__all__ = ("User",)
 
 
 class User(Cacheable, max=1000):

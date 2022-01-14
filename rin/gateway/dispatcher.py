@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
     Listeners = collections.defaultdict[str, list[Callable[..., Any]]]
 
+__all__ = ("Dispatcher",)
 _log = logging.getLogger(__name__)
 
 
@@ -63,6 +64,4 @@ class Dispatcher:
 
     def create_user(self, data: UserData) -> User:
         user = User(self.client, data)
-        User.cache.set(user.id, user)  # type: ignore[attr-defined]
-
-        return user
+        return User.cache.set(user.id, user)  # type: ignore[attr-defined, no-any-return]

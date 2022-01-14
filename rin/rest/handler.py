@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 import aiohttp
 
 from .errors import BadRequest, Forbidden, NotFound, Unauthorized
+from .ratelimiter import RatelimitedClientResponse, Ratelimiter
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
@@ -41,8 +42,9 @@ class Route:
 
 
 class RESTClient:
-    __slots__ = ("session", "token", "client")
+    __slots__ = ("session", "token", "client", "semaphores")
 
+    GATEWAY_TYPE: ClassVar[type[Gateway]]
     ERRORS: ClassVar[dict[int, Any]] = {
         400: BadRequest,
         401: Unauthorized,
@@ -55,31 +57,38 @@ class RESTClient:
         self.token = token
         self.client = client
 
-    async def _create_session(self, cls: type[Gateway] | None) -> aiohttp.ClientSession:
-        if cls is not None:
-            return aiohttp.ClientSession(
-                ws_response_class=cls,
-                loop=self.client.loop,
-            )
+        self.semaphores: dict[str, asyncio.Semaphore] = {
+            "global": asyncio.Semaphore(50)
+        }
 
-        return aiohttp.ClientSession(loop=self.client.loop)
+    async def _create_session(self) -> aiohttp.ClientSession:
+        if hasattr(self, "session"):
+            return self.session
+
+        return aiohttp.ClientSession(
+            ws_response_class=RESTClient.GATEWAY_TYPE,
+            response_class=RatelimitedClientResponse,
+            loop=self.client.loop,
+        )
 
     async def connect(self, url: str) -> Gateway:
         if not hasattr(self, "session"):
-            self.session = await self._create_session(None)
+            self.session = await self._create_session()
 
         return await self.session.ws_connect(url)  # type: ignore
 
-    async def request(self, method: str, route: Route, **kwargs: Any) -> Any:
-        if not hasattr(self, "session"):
-            cls = kwargs.pop("cls") if kwargs.get("cls") else None
-            self.session = await self._create_session(cls)
+    async def _request(
+        self, method: str, endpoint: str, **kwargs: Any
+    ) -> RatelimitedClientResponse:
+        self.session = await self._create_session()
 
-            return await (
-                await self.session.request(
-                    method,
-                    route.endpoint,
-                    headers={"Authorization": f"Bot {self.token}"},
-                    **kwargs,
-                )
-            ).json()
+        return await self.session.request(  # type: ignore
+            method,
+            endpoint,
+            headers={"Authorization": f"Bot {self.token}"},
+            **kwargs,
+        )
+
+    async def request(self, method: str, route: Route, **kwargs: Any) -> Any:
+        async with Ratelimiter(self, route) as handler:
+            return await handler.request(method, **kwargs)

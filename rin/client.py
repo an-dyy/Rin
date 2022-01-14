@@ -124,7 +124,7 @@ class GatewayClient:
 
     async def start(self) -> None:
         """Starts the connection."""
-        data = await self.rest.request("GET", Route("gateway/bot"), cls=Gateway)
+        data = await self.rest.request("GET", Route("gateway/bot"))
         self.gateway = await self.rest.connect(data["url"])
 
         await self.gateway.start(self)

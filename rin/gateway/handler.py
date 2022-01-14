@@ -17,10 +17,12 @@ if TYPE_CHECKING:
 
     PayloadData = IdentifyData | DispatchData | ResumeData | HeartbeatData
 
+__all__ = ("Gateway",)
+
 _log = logging.getLogger(__name__)
 
 
-class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore
+class Gateway(aiohttp.ClientWebSocketResponse):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -42,7 +44,6 @@ class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore
 
     async def send_dispatch(self, data: dict[Any, Any]) -> None:
         name = data["t"]
-        _log.debug(f"GATEWAY SENT: {name}")
 
         if name == "READY":
             self.session_id = data["d"]["session_id"]

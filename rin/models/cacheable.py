@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from typing_extensions import Self
 
+__all__ = ("Cache", "Cacheable")
+
 T = TypeVar("T")
 CacheableT = TypeVar("CacheableT", bound="Cacheable")
 
@@ -17,15 +19,17 @@ class Cache(Generic[T]):
     def __repr__(self) -> str:
         return f"<Cache max={self.max} len={self.len}>"
 
-    def __setitem__(self, key: str | int, value: T) -> None:
+    def __setitem__(self, key: str | int, value: T) -> T:
         self.root[key] = value
         self.len += 1
 
         if self.max and self.len > self.max:
             self.pop()
 
-    def set(self, key: str | int, value: T) -> None:
-        self.__setitem__(key, value)
+        return value
+
+    def set(self, key: str | int, value: T) -> T:
+        return self.__setitem__(key, value)
 
     def get(self, key: str | int) -> None | T:
         return self.root.get(key)

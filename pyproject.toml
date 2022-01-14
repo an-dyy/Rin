@@ -25,9 +25,6 @@ ignore_missing_imports = true
 strict = true
 implicit_reexport = true
 
-[tool.pyright]
-typeCheckingMode = "strict"
-
 [tool.isort]
 profile = "black"
 
