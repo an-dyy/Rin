@@ -1,38 +1,36 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+from typing_extensions import Self
+
+T = TypeVar("T")
+CacheableT = TypeVar("CacheableT", bound="Cacheable")
 
 
-class Cache:
-    def __init__(self, max: None | int = None, type: None | type[Any] = None) -> None:
-        self.root: dict[str | int, Any] = {}
-        self.type = type
+class Cache(Generic[T]):
+    def __init__(self, max: None | int = None) -> None:
+        self.root: dict[str | int, T] = {}
         self.max = max
         self.len = 0
-        self.type = type
 
     def __repr__(self) -> str:
         return f"<Cache max={self.max} len={self.len}>"
 
-    def __setitem__(self, key: str | int, value: Any) -> None:
-        if self.type is not None and not isinstance(value, self.type):
-            raise TypeError(
-                f"Cannot set value to type of {value!r} when cache type is {self.type!r}"
-            ) from None
-
+    def __setitem__(self, key: str | int, value: T) -> None:
         self.root[key] = value
         self.len += 1
 
         if self.max and self.len > self.max:
             self.pop()
 
-    def set(self, key: str | int, value: Any) -> None:
+    def set(self, key: str | int, value: T) -> None:
         self.__setitem__(key, value)
 
-    def get(self, key: str | int) -> None | Any:
+    def get(self, key: str | int) -> None | T:
         return self.root.get(key)
 
-    def pop(self, key: None | str | int = None) -> Any:
+    def pop(self, key: None | str | int = None) -> T:
         if key is not None:
             return self.root.pop(key)
 
@@ -40,23 +38,29 @@ class Cache:
 
 
 class CacheableMeta(type):
-    __cache__: Cache
+    __cache__: Cache[Any]
 
     def __new__(
-        cls: type[CacheableMeta],
+        cls,
         name: str,
         bases: tuple[type, ...],
         attrs: dict[Any, Any],
-        type: None | type = None,
         max: None | int = None,
     ) -> CacheableMeta:
-        attrs["__cache__"] = Cache(max, type=type)
+        attrs["__cache__"] = Cache[Any](max)
         return super().__new__(cls, name, bases, attrs)
 
     @property
-    def cache(self) -> Cache:
+    def cache(self) -> Cache[Any]:
         return self.__cache__
 
 
-class Cacheable(metaclass=CacheableMeta):
-    cache: Cache
+class Cacheable(metaclass=CacheableMeta):  # Thanks stocker
+    __cache__: Cache[Self]  # type: ignore[valid-type]
+
+    if TYPE_CHECKING:
+
+        @classmethod
+        @property
+        def cache(cls: type[CacheableT]) -> Cache[CacheableT]:
+            ...

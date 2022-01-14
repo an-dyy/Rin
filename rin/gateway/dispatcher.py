@@ -63,6 +63,6 @@ class Dispatcher:
 
     def create_user(self, data: UserData) -> User:
         user = User(self.client, data)
-        User.cache.set(user.id, user)
+        User.cache.set(user.id, user)  # type: ignore[attr-defined]
 
         return user

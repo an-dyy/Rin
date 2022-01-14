@@ -83,6 +83,3 @@ class User(Cacheable, max=1000):
     def public_flags(self) -> int:
         flags = self._data.get("public_flags")
         return int(flags) if flags is not None else 0
-
-
-User.cache.type = User
