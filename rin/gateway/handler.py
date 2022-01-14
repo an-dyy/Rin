@@ -22,7 +22,7 @@ __all__ = ("Gateway",)
 _log = logging.getLogger(__name__)
 
 
-class Gateway(aiohttp.ClientWebSocketResponse):
+class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 

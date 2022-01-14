@@ -60,7 +60,7 @@ class Ratelimiter:
                 self.loop.call_later(resp.reset_after, semaphore.release)
 
                 await asyncio.sleep(resp.reset_after)
-                await self.request(method, **kwargs)
+                return await self.request(method, **kwargs)
 
             if resp.ok:
                 _log.debug(
@@ -77,7 +77,7 @@ class Ratelimiter:
                 if retry_after is not None:
                     await asyncio.sleep(retry_after)
 
-                await self.request(method, **kwargs)
+                return await self.request(method, **kwargs)
 
             if not resp.ok:
                 raise self.rest.ERRORS.get(resp.status, HTTPException)(data) from None
@@ -91,7 +91,7 @@ class Ratelimiter:
         self.rest.semaphores.pop(self.bucket, None)
 
 
-class RatelimitedClientResponse(aiohttp.ClientResponse):
+class RatelimitedClientResponse(aiohttp.ClientResponse):  # type: ignore[misc]
     REMAINING: ClassVar[str] = "X-Ratelimit-Remaining"
     RESET_AT: ClassVar[str] = "X-Ratelimit-Reset-After"
     TOTAL: ClassVar[str] = "X-Ratelimit-Limit"
@@ -126,4 +126,4 @@ class RatelimitedClientResponse(aiohttp.ClientResponse):
 
     @property
     def is_ratelimited(self) -> bool:
-        return self.status == 429
+        return bool(self.status == 429)

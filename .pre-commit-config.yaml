@@ -15,7 +15,7 @@ repos:
     rev: v0.931
     hooks:
       - id: mypy
-        args: [--strict, --implicit-reexport]
+        args: [--strict, --implicit-reexport, --show-error-codes]
 
   - repo: https://github.com/pycqa/flake8
     rev: 4.0.1
