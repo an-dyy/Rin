@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .cacheable import Cache, Cacheable
+
 if TYPE_CHECKING:
     from rin.types import UserData
 
     from ..gateway import GatewayClient
 
 
-class User:
+class User(Cacheable, type="User", max=1000):
     __slots__ = ("_client", "_data")
+    __cache__: Cache[User]
 
     def __init__(self, client: GatewayClient, data: UserData) -> None:
         self._client = client

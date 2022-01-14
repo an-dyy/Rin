@@ -36,7 +36,9 @@ class Dispatcher:
         elif once is False:
             self.listeners[name].append(func)
 
-    async def __call__(self, name: str, data: dict[Any, Any]) -> None:
+    async def __call__(
+        self, name: str, data: dict[Any, Any]
+    ) -> None:  # TODO: Allow custom classes to events
         _log.debug(f"DISPATCHING: {name.upper()}")
 
         name = name.lower()
@@ -60,4 +62,7 @@ class Dispatcher:
         return self.create_user(data["user"])
 
     def create_user(self, data: UserData) -> User:
-        return User(self.client, data)
+        user = User(self.client, data)
+        User.cache.set(user.id, user)
+
+        return user

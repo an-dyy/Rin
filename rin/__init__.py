@@ -3,4 +3,5 @@ __author__ = "Andy"
 
 from .client import *
 from .gateway import *
+from .models import *
 from .rest import *

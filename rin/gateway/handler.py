@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 
-class Gateway(aiohttp.ClientWebSocketResponse):
+class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -75,11 +75,11 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def close(
         self, *, code: int = aiohttp.WSCloseCode.OK, message: bytes = b""
-    ) -> bool:
+    ) -> None:
         if self.pacemaker is not None and not self.pacemaker.cancelled():
             self.pacemaker.cancel()
 
-        return await super().close(code=code, message=message)
+        await super().close(code=code, message=message)
 
     async def send(self, payload: PayloadData) -> None:
         await self.ratelimiter.sleep(self.send_json(payload))
