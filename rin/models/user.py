@@ -15,7 +15,8 @@ __all__ = ("User",)
 class User(Cacheable, max=1000):
     """Represents a User.
 
-    |cacheable|
+    .. note::
+        |cacheable|
     """
 
     __slots__ = ("_client", "_data")

@@ -1,0 +1,3 @@
+aiohttp >= "3.7.4"
+sphinxawesome-theme >= "3.2.3"
+typing-extensions >= "4.0.1"

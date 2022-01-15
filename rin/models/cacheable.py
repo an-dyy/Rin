@@ -13,6 +13,14 @@ CacheableT = TypeVar("CacheableT", bound="Cacheable")
 class Cache(Generic[T]):
     """A class which represents an in-memory cache.
 
+    .. note::
+        All cache-able classes have this
+        class under the attribute `Class.cache`
+
+    .. code-block:: python
+
+        rin.User.cache.get(123)
+
     Parameters
     ----------
     max: Optional[:class:`int`]
