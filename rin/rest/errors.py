@@ -6,7 +6,18 @@ __all__ = ("HTTPException", "Unauthorized", "BadRequest", "Forbidden", "NotFound
 
 
 class HTTPException(Exception):
-    """Represents an error when making a request."""
+    """Represents an error when making a request.
+
+    Parameters
+    ----------
+    data: dict[str, Any]
+        The data of the error received from the RESTful API.
+
+    Attributes
+    ----------
+    data: dict[str, Any]
+        The data of the error.
+    """
 
     def __init__(self, data: dict[str, Any] | str) -> None:
         self.data = data
@@ -14,10 +25,12 @@ class HTTPException(Exception):
 
     @property
     def code(self) -> int:
+        """The error's code."""
         return 0 if isinstance(self.data, str) else self.data.get("code", 0)
 
     @property
     def message(self) -> str:
+        """The error's message."""
         return self.data if isinstance(self.data, str) else self.data.get("message", "")
 
 

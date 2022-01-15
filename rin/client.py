@@ -43,10 +43,9 @@ class GatewayClient:
 
     dispatcher: :class:`.Dispatcher`
         The dispatch manager for the client.
-
     """
 
-    __slots__ = ("rest", "intents", "gateway", "loop", "dispatch")
+    __slots__ = ("loop", "rest", "intents", "gateway", "dispatch")
 
     def __init__(
         self,
@@ -78,14 +77,19 @@ class GatewayClient:
 
         Parameters
         ----------
-        name: :class:`str`
-            The name of the event to register to.
+        name: :class:`.Event`
+            The the event to register to.
 
-        func: Callable[Any, Any]
+        func: Callable[..., Any]
             The callback to register to the event.
 
         once: :class:`bool`
             If the callback should be ran once per lifetime.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            Raised when the callback is not a Coroutine.
         """
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Listener callback must be Coroutine.") from None
@@ -97,8 +101,8 @@ class GatewayClient:
 
         Parameters
         ----------
-        name: Optional[:class:`str`]
-            The name of the event to register to.
+        name: :class:`.Event`
+            The event to register to.
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -112,8 +116,8 @@ class GatewayClient:
 
         Parameters
         ----------
-        name: Optional[:class:`str`]
-            The name of the event to register to.
+        name: :class:`.Event`
+            The event to register to.
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -123,7 +127,12 @@ class GatewayClient:
         return inner
 
     async def start(self) -> None:
-        """Starts the connection."""
+        """Starts the connection.
+
+        This method creates the internal gateway handler and
+        starts the pacemaker to keep the connect "alive". This also
+        waits for reconnect dispatches to restart the gateway.
+        """
         while True:
             data = await self.rest.request("GET", Route("gateway/bot"))
             self.gateway = await self.rest.connect(data["url"])

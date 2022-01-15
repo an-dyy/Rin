@@ -17,6 +17,37 @@ _log = logging.getLogger(__name__)
 
 
 class Ratelimiter:
+    """A class used for ratelimit handling.
+
+    Parameters
+    ----------
+    rest: :class:`.RESTClient`
+        The RESTClient to ratelimit.
+
+    route: :class:`.Route`
+        The route being used for the request.
+
+    Attributes
+    ----------
+    loop: :class:`asyncio.AbstractEventLoop`
+        The loop used for asynchronus operations.
+
+    rest: :class:`.RESTClient`
+        The RESTClient being ratelimited.
+
+    route: :class:`.Route`
+        The route being used for the request.
+
+    endpoint: :class:`str`
+        The endpoint of the Route.
+
+    bucket: :class:`str`
+        The bucket of the Route.
+
+    auth: dict[str, str]
+        The authorization header dict.
+    """
+
     def __init__(self, rest: RESTClient, route: Route) -> None:
         self.loop = rest.client.loop
         self.rest = rest
@@ -28,6 +59,7 @@ class Ratelimiter:
         self.auth = {"Authorization": f"Bot {self.rest.token}"}
 
     async def ensure(self) -> asyncio.Semaphore:
+        """Ensures there is a :class:`asyncio.Semaphore`."""
         if semaphore := self.get(self.bucket):
             return semaphore
 
@@ -41,9 +73,41 @@ class Ratelimiter:
         return semaphore
 
     def get(self, bucket: str) -> None | asyncio.Semaphore:
+        """Gets the bucket's semaphore if one exists.
+
+        Parameters
+        ----------
+        bucket: :class:`str`
+            The bucket to search for.
+
+        Returns
+        -------
+        Optional[:class:`asyncio.Semaphore`]
+            The semaphore if found.
+        """
         return self.rest.semaphores.get(bucket)
 
     async def request(self, method: str, **kwargs: Any) -> None | dict[Any, Any] | str:
+        """Makes the request with ratelimit handling.
+
+        Parameters
+        ----------
+        method: :class:`str`
+            The method to make the request with, E.g `"GET"`.
+
+        kwargs: Any
+            The options to pass when requesting, E.g `json=payload`.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong while making the request.
+
+        Returns
+        -------
+        Union[:class:`dict`, :class:`str`]:
+            The return of the request.
+        """
         semaphore = await self.ensure()
 
         async with self.rest.semaphores["global"]:
@@ -92,6 +156,8 @@ class Ratelimiter:
 
 
 class RatelimitedClientResponse(aiohttp.ClientResponse):
+    """A subclass of :class:`aiohttp.ClientResponse`"""
+
     REMAINING: ClassVar[str] = "X-Ratelimit-Remaining"
     RESET_AT: ClassVar[str] = "X-Ratelimit-Reset-After"
     TOTAL: ClassVar[str] = "X-Ratelimit-Limit"
@@ -107,23 +173,29 @@ class RatelimitedClientResponse(aiohttp.ClientResponse):
 
     @property
     def uses(self) -> int:
+        """Uses left in the bucket before it's depleted."""
         return int(self.headers.get(RatelimitedClientResponse.REMAINING, 1))
 
     @property
     def limit(self) -> int:
+        """The total amount of requests of the bucket."""
         return int(self.headers.get(RatelimitedClientResponse.TOTAL, 1))
 
     @property
     def reset_after(self) -> float:
+        """How long until the ratelimit of a bucket resets."""
         return float(self.headers.get(RatelimitedClientResponse.RESET_AT, 0))
 
     async def retry_after(self) -> None | float:
+        """The time to wait before making another request."""
         return (await self.json())["retry_after"] if self.is_ratelimited else None
 
     @property
     def is_depleted(self) -> bool:
+        """If the bucket is currently depleted."""
         return self.status != 429 and self.uses == 0
 
     @property
     def is_ratelimited(self) -> bool:
+        """If the REST API returned a status code `429`."""
         return bool(self.status == 429)
