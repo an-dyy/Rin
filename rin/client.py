@@ -124,11 +124,9 @@ class GatewayClient:
 
     async def start(self) -> None:
         """Starts the connection."""
-        data = await self.rest.request("GET", Route("gateway/bot"))
-        self.gateway = await self.rest.connect(data["url"])
+        while True:
+            data = await self.rest.request("GET", Route("gateway/bot"))
+            self.gateway = await self.rest.connect(data["url"])
 
-        await self.gateway.start(self)
-        await asyncio.wait_for(self.gateway.reconnect_future, timeout=None)
-
-        del self.gateway
-        await self.start()
+            await self.gateway.start(self)
+            await asyncio.wait_for(self.gateway.reconnect_future, timeout=None)
