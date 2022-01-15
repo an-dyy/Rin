@@ -27,11 +27,12 @@ class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
         super().__init__(*args, **kwargs)
 
         self.ratelimiter = Ratelimiter(2, 1)
-        self.intents: int
         self.client: GatewayClient
+        self.intents: int
 
         self.interval: float = 0
         self.pacemaker: asyncio.Task[None]
+        self.reconnect_future: asyncio.Future[None]
 
         self.session_id = ""
         self.sequence = 0
@@ -54,18 +55,20 @@ class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
         return await self.send(self.resume)
 
     async def reconnect(self, _: dict[Any, Any]) -> None:
+        _log.debug("GATEWAY SENT RECONNECT: CLOSING WEBSOCKET")
+
         if not self._closed:
             await self.close()
 
-        _log.debug(
-            "GATEWAY SENT RECONNECT: CLOSING WEBSOCKET"
-        )  # TODO: Actually restart
+        self.reconnect_future.set_result(None)
 
     async def start(self, client: GatewayClient) -> None:
         _log.debug("CREATING GATEWAY FROM CLIENT.")
 
         self.client = client
         self.intents = client.intents
+
+        self.reconnect_future = client.loop.create_future()
 
         data = await self.receive_json()
         self.interval = data["d"]["heartbeat_interval"]

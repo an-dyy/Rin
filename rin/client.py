@@ -128,3 +128,7 @@ class GatewayClient:
         self.gateway = await self.rest.connect(data["url"])
 
         await self.gateway.start(self)
+        await asyncio.wait_for(self.gateway.reconnect_future, timeout=None)
+
+        del self.gateway
+        await self.start()
