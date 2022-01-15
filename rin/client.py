@@ -4,7 +4,7 @@ import asyncio
 import inspect
 from typing import Any, Callable
 
-from .gateway import Dispatcher, Gateway
+from .gateway import Dispatch, Gateway, Event
 from .rest import RESTClient, Route
 
 __all__ = ("GatewayClient",)
@@ -46,7 +46,7 @@ class GatewayClient:
 
     """
 
-    __slots__ = ("rest", "intents", "gateway", "loop", "dispatcher")
+    __slots__ = ("rest", "intents", "gateway", "loop", "dispatch")
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class GatewayClient:
         self.intents = intents
 
         self.gateway: Gateway
-        self.dispatcher = Dispatcher(self)
+        self.dispatch = Dispatch(self)
 
     def _create_loop(self) -> asyncio.AbstractEventLoop:
         try:
@@ -72,7 +72,7 @@ class GatewayClient:
         return loop
 
     def subscribe(
-        self, name: str, func: Callable[..., Any], *, once: bool = False
+        self, event: Event, func: Callable[..., Any], *, once: bool = False
     ) -> None:
         """Used to subscribe a callback to an event.
 
@@ -90,9 +90,9 @@ class GatewayClient:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Listener callback must be Coroutine.") from None
 
-        self.dispatcher[(name, once)] = func
+        self.dispatch[(event.value.lower(), once)] = func
 
-    def on(self, name: None | str = None) -> Callable[..., Any]:
+    def on(self, event: Event) -> Callable[..., Any]:
         """Registers a callback to an event.
 
         Parameters
@@ -102,12 +102,12 @@ class GatewayClient:
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
-            self.subscribe(name or func.__name__, func)
+            self.subscribe(event, func)
             return func
 
         return inner
 
-    def once(self, name: None | str = None) -> Callable[..., Any]:
+    def once(self, event: Event) -> Callable[..., Any]:
         """Registers a onetime callback to an event.
 
         Parameters
@@ -117,7 +117,7 @@ class GatewayClient:
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
-            self.subscribe(name or func.__name__, func, once=True)
+            self.subscribe(event, func, once=True)
             return func
 
         return inner

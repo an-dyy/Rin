@@ -6,8 +6,8 @@ import sys
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 import aiohttp
+import enum
 
-from .code import OPCode
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
@@ -20,6 +20,20 @@ if TYPE_CHECKING:
 __all__ = ("Gateway",)
 
 _log = logging.getLogger(__name__)
+
+
+class OPCode(enum.IntFlag):
+    DISPATCH = 0
+    HEARTBEAT = 1
+    IDENTIFY = 2
+    PRESENCE_UPDATE = 3
+    VOICE_STATE_UPDATE = 4
+    RESUME = 6
+    RECONNECT = 7
+    REQUEST_GUILD_MEMBERS = 8
+    INVALID_SESSION = 9
+    HELLO = 10
+    HEARTBEAT_ACK = 11
 
 
 class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
@@ -49,7 +63,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
         if name == "READY":
             self.session_id = data["d"]["session_id"]
 
-        await self.client.dispatcher(name.lower(), data["d"])
+        await self.client.dispatch(name.lower(), data["d"])
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)

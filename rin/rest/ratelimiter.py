@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from .handler import RESTClient, Route
 
 __all__ = ("Ratelimiter", "RatelimitedClientResponse")
-
 _log = logging.getLogger(__name__)
 
 

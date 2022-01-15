@@ -13,11 +13,11 @@ if TYPE_CHECKING:
 
     Listeners = collections.defaultdict[str, list[Callable[..., Any]]]
 
-__all__ = ("Dispatcher",)
+__all__ = ("Dispatch",)
 _log = logging.getLogger(__name__)
 
 
-class Dispatcher:
+class Dispatch:
     def __init__(self, client: GatewayClient) -> None:
         self.loop = client.loop
         self.client = client
