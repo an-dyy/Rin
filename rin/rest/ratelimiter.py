@@ -11,6 +11,7 @@ from .errors import HTTPException
 if TYPE_CHECKING:
     from .handler import RESTClient, Route
 
+
 __all__ = ("Ratelimiter", "RatelimitedClientResponse")
 _log = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ class Ratelimiter:
         self.rest.semaphores.pop(self.bucket, None)
 
 
-class RatelimitedClientResponse(aiohttp.ClientResponse):  # type: ignore[misc]
+class RatelimitedClientResponse(aiohttp.ClientResponse):
     REMAINING: ClassVar[str] = "X-Ratelimit-Remaining"
     RESET_AT: ClassVar[str] = "X-Ratelimit-Reset-After"
     TOTAL: ClassVar[str] = "X-Ratelimit-Limit"

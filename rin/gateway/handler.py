@@ -36,7 +36,7 @@ class OPCode(enum.IntFlag):
     HEARTBEAT_ACK = 11
 
 
-class Gateway(aiohttp.ClientWebSocketResponse):  # type: ignore[misc]
+class Gateway(aiohttp.ClientWebSocketResponse):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
