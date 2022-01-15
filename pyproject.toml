@@ -5,6 +5,11 @@ description = "A successor to the Lefi project"
 authors = ["an-dyy <andy.development@protonmail.com>"]
 license = "MIT"
 
+readme = "README.md"
+keywords = ["discord", "discord-api"]
+homepage = "https://github.com/an-dyy/Rin"
+packages = [{include = "rin"}]
+
 [tool.poetry.dependencies]
 python = "^3.9"
 aiohttp = "^3.8.1"
