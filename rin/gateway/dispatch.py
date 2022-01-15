@@ -48,7 +48,7 @@ class Dispatch:
 
         for once in self.once[name][:]:
             self.loop.create_task(once(parsed))
-            self.once.popitem()
+            self.once[name].pop()
 
         for listener in self.listeners[name]:
             self.loop.create_task(listener(parsed))
