@@ -19,7 +19,7 @@ This is the successor to the Lefi project.
 [Here!](examples/)
 
 ## Documentation
-Coming soon
+[Documentation](https://rin.readthedocs.io/en/latest/index.html)
 
 ## Contributing
 1. If you plan on contributing please open an issue beforehand
