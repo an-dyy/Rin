@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Callable
 import asyncio
 
 from ..models import User
-from .event import Event
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
