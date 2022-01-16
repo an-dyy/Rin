@@ -1,0 +1,38 @@
+name: Discord Status Embed
+
+on:
+  workflow_run:
+    workflows:
+      - flake8
+      - pytest
+      - mypy
+    types:
+      - completed
+  
+
+jobs:
+  send_embed:
+    runs-on: ubuntu-latest
+    name: Send an embed to Discord
+
+    steps:
+    - name: Run the GitHub Actions Status Embed Action
+      uses: SebastiaanZ/github-status-embed-for-discord@main
+      with:
+        # Discord webhook
+        webhook_id: '931994299728531536'
+        webhook_token: ${{ secrets.WEBHOOK_TOKEN }}
+          # Workflow information
+        workflow_name: ${{ github.event.workflow_run.name }}
+        run_id: ${{ github.event.workflow_run.id }}
+        run_number: ${{ github.event.workflow_run.run_number }}
+        status: ${{ github.event.workflow_run.conclusion }}
+        actor: ${{ github.actor }}
+        repository:  ${{ github.repository }}
+        ref: ${{ github.ref }}
+        sha: ${{ github.event.workflow_run.head_sha }}
+  
+        pr_author_login: ${{ github.event.pull_request.user.login }}
+        pr_number: ${{ github.event.pull_request.number }}
+        pr_title: ${{ github.event.pull_request.title }}
+        pr_source: ${{ github.event.pull_request.head.label }}
