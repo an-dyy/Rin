@@ -6,7 +6,7 @@ on:
       - flake8
       - pytest
       - mypy
-     types:
+    types:
       - completed
   
 
