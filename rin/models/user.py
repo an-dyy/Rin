@@ -25,6 +25,8 @@ class User(Cacheable, max=1000):
         self._client = client
         self._data = data
 
+        User.cache.set(self.id, self)
+
     def __repr__(self) -> str:
         return f"<User username={self.username!r} discriminator={self.discriminator!r}>"
 

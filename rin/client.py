@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import logging
 from typing import Any, Callable
 
 from .gateway import Dispatch, Gateway, Event
 from .rest import RESTClient, Route
 
 __all__ = ("GatewayClient",)
+_log = logging.getLogger(__name__)
 
 
 class GatewayClient:
@@ -52,7 +54,7 @@ class GatewayClient:
         token: str,
         *,
         loop: None | asyncio.AbstractEventLoop = None,
-        intents: int = 1
+        intents: int = 1,
     ) -> None:
         self.loop = loop or self._create_loop()
         self.rest = RESTClient(token, self)
@@ -71,7 +73,13 @@ class GatewayClient:
         return loop
 
     def subscribe(
-        self, event: Event, func: Callable[..., Any], *, once: bool = False
+        self,
+        event: Event,
+        func: Callable[..., Any],
+        *,
+        once: bool = False,
+        collect: None | int = None,
+        check: Callable[..., bool] = lambda *_: True,
     ) -> None:
         """Used to subscribe a callback to an event.
 
@@ -86,6 +94,13 @@ class GatewayClient:
         once: :class:`bool`
             If the callback should be ran once per lifetime.
 
+        collect: Optional[:class:`int`]
+            How many times to collect the event before dispatching
+            all at once. Arguments for the callback will be passed as lists.
+
+        check: Callable[..., :class:`bool`]
+            The check the event has to pass in order to be dispatched.
+
         Raises
         ------
         :exc:`TypeError`
@@ -94,34 +109,84 @@ class GatewayClient:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Listener callback must be Coroutine.") from None
 
-        self.dispatch[(event.value.lower(), once)] = func
+        if collect is not None:
+            self.dispatch.collectors[event.value.lower()] = (
+                asyncio.Queue[Any](maxsize=collect),
+                func,
+                check,
+            )
 
-    def on(self, event: Event) -> Callable[..., Any]:
-        """Registers a callback to an event.
+            _log.debug(
+                f"DISPATCHER: Appending collector {func.__name__!r} to (event={event}, amount={collect})"
+            )
+
+            return None
+
+        self.dispatch[(event.value.lower(), once)] = (func, check)
+
+    def collect(
+        self, event: Event, *, amount: int, check: Callable[..., bool] = lambda *_: True
+    ) -> Callable[..., Any]:
+        """Registers a collector to an event.
+
+        Arguments of the callback will be passed as lists when
+        the event has been collected X amount of times.
 
         Parameters
         ----------
         name: :class:`.Event`
             The event to register to.
+
+        amount: :class:`int`
+            The amount to collect before dispatching.
+
+        check: Callable[..., bool]
+            The check needed to be valid in order to collect
+            an event.
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
-            self.subscribe(event, func)
+            self.subscribe(event, func, collect=amount, check=check)
             return func
 
         return inner
 
-    def once(self, event: Event) -> Callable[..., Any]:
+    def on(
+        self, event: Event, check: Callable[..., bool] = lambda *_: True
+    ) -> Callable[..., Any]:
+        """Registers a callback to an event.
+
+        Parameters
+        ----------
+        event: :class:`.Event`
+            The event to register to.
+
+        check: Callable[..., :class:`bool`]
+            The check the event has to pass in order to be dispatched.
+        """
+
+        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
+            self.subscribe(event, func, check=check)
+            return func
+
+        return inner
+
+    def once(
+        self, event: Event, check: Callable[..., bool] = lambda *_: True
+    ) -> Callable[..., Any]:
         """Registers a onetime callback to an event.
 
         Parameters
         ----------
-        name: :class:`.Event`
+        event: :class:`.Event`
             The event to register to.
+
+        check: Callable[..., :class:`bool`]
+            The check the event has to pass in order to be dispatched.
         """
 
         def inner(func: Callable[..., Any]) -> Callable[..., Any]:
-            self.subscribe(event, func, once=True)
+            self.subscribe(event, func, once=True, check=check)
             return func
 
         return inner

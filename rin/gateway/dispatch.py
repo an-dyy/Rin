@@ -3,15 +3,22 @@ from __future__ import annotations
 import collections
 import logging
 from typing import TYPE_CHECKING, Any, Callable
+import asyncio
 
 from ..models import User
+from .event import Event
 
 if TYPE_CHECKING:
-    from rin.types import UserData
-
     from ..client import GatewayClient
 
-    Listeners = collections.defaultdict[str, list[Callable[..., Any]]]
+    Listeners = collections.defaultdict[
+        str, list[tuple[Callable[..., Any], Callable[..., bool]]]
+    ]
+
+    Collectors = dict[
+        str, tuple[asyncio.Queue[Any], Callable[..., Any], Callable[..., bool]]
+    ]
+
 
 __all__ = ("Dispatch",)
 _log = logging.getLogger(__name__)
@@ -24,10 +31,15 @@ class Dispatch:
 
         self.listeners: Listeners = collections.defaultdict(list)
         self.once: Listeners = collections.defaultdict(list)
+        self.collectors: Collectors = {}
 
-    def __setitem__(self, event: tuple[str, bool], func: Callable[..., Any]) -> None:
+    def __setitem__(
+        self,
+        event: tuple[str, bool],
+        func: tuple[Callable[..., Any], Callable[..., bool]],
+    ) -> None:
         _log.debug(
-            f"DISPATCHER: Appending {func.__name__!r} to (event={event[0]}, once={event[1]})"
+            f"DISPATCHER: Appending {func[0].__name__!r} to (event={Event(event[0].upper())}, once={event[1]})"
         )
         name, once = event
 
@@ -37,31 +49,43 @@ class Dispatch:
         elif once is False:
             self.listeners[name].append(func)
 
-    async def __call__(
-        self, name: str, data: dict[Any, Any]
-    ) -> None:  # TODO: Allow custom classes to events
+    def __call__(self, name: str, *payload: Any) -> None:
         _log.debug(f"DISPATCHING: {name.upper()}")
-
         name = name.lower()
-        parser = getattr(self, f"parse_{name}", self.no_parse)
-        parsed = await parser(data)
 
-        for once in self.once[name][:]:
-            self.loop.create_task(once(parsed))
-            self.once[name].pop()
+        for once, check in self.once[name][:]:
+            if check(*payload):
+                self.loop.create_task(once(*payload))
+                self.once[name].pop()
 
-        for listener in self.listeners[name]:
-            self.loop.create_task(listener(parsed))
+        for listener, check in self.listeners[name]:
+            if check(*payload):
+                self.loop.create_task(listener(*payload))
 
-        for wildcard in self.listeners["*"]:
-            self.loop.create_task(wildcard(name, parsed))
+        if self.collectors.get(name):
+            queue, callback, check = self.collectors[name]
 
-    async def no_parse(self, data: dict[Any, Any]) -> dict[Any, Any]:
-        return data
+            if check(*payload):
+                self.loop.create_task(
+                    self.dispatch_collector(queue, callback, *payload)
+                )
 
-    async def parse_ready(self, data: dict[Any, Any]) -> User:
-        return self.create_user(data["user"])
+        for wildcard, check in self.listeners["*"]:
+            if check(*payload):
+                self.loop.create_task(wildcard(name, *payload))
 
-    def create_user(self, data: UserData) -> User:
-        user = User(self.client, data)
-        return User.cache.set(user.id, user)  # type: ignore[attr-defined, no-any-return]
+    async def dispatch_collector(
+        self, queue, callback: Callable[..., Any], *data: Any
+    ) -> None:
+        await queue.put(data)
+        queue.task_done()
+
+        if queue.full():
+            items = list(zip(*[queue.get_nowait() for _ in range(queue.maxsize)]))
+            self.loop.create_task(callback(*items))
+
+    async def no_parse(self, name: str, data: dict[Any, Any]) -> None:
+        self(name, data)
+
+    async def parse_ready(self, data: dict[Any, Any]) -> None:
+        self("ready", User(self.client, data["user"]))
