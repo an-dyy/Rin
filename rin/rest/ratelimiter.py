@@ -130,6 +130,8 @@ class Ratelimiter:
                 _log.debug(
                     f"{resp.status}: {method} ROUTE: {self.endpoint} REMAINING: {resp.uses}"
                 )
+
+                self.route.lock.release()
                 return data
 
             if resp.is_ratelimited:
