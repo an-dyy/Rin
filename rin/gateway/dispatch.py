@@ -38,8 +38,9 @@ class Dispatch:
         event: tuple[str, bool],
         func: tuple[Callable[..., Any], Callable[..., bool]],
     ) -> None:
+        callback, _ = func
         _log.debug(
-            f"DISPATCHER: Appending {func[0].__name__!r} to (event={Event(event[0].upper())}, once={event[1]})"
+            f"DISPATCHER: Appending {callback.__name__!r} to (event={event[0]}, once={event[1]})"
         )
         name, once = event
 

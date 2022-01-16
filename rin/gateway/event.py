@@ -5,7 +5,7 @@ import enum
 __all__ = ("Event",)
 
 
-class Event(enum.Enum):
+class Event(str, enum.Enum):
     READY = "READY"
     WILDCARD = "*"
 

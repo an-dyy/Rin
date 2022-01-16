@@ -61,6 +61,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
     async def send_dispatch(self, data: dict[Any, Any]) -> None:
         dispatch = self.client.dispatch
         name = data["t"]
+        event = Event(name)
 
         if name == "READY":
             self.session_id = data["d"]["session_id"]
@@ -76,14 +77,14 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         if dispatch.collectors.get("*"):
             queue, callback, check = dispatch.collectors["*"]
 
-            if check(Event(name), data["d"]):
+            if check(event, data["d"]):
                 self.client.loop.create_task(
-                    dispatch.dispatch_collector(queue, callback, Event(name), data["d"])
+                    dispatch.dispatch_collector(queue, callback, event, data["d"])
                 )
 
         for wildcard, check in dispatch.listeners["*"]:
-            if check(Event(name), data["d"]):
-                self.client.loop.create_task(wildcard(Event(name), data["d"]))
+            if check(event, data["d"]):
+                self.client.loop.create_task(wildcard(event, data["d"]))
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)
