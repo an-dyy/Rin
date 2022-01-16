@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .cacheable import Cacheable
+from .cacheable import Cache, Cacheable
 
 if TYPE_CHECKING:
     from rin.types import UserData
+    from typing_extensions import Self
 
     from ..client import GatewayClient
 
@@ -13,6 +14,7 @@ __all__ = ("User",)
 
 
 class User(Cacheable, max=1000):
+    cache: Cache[Self]  # type: ignore[valid-type]
     """Represents a User.
 
     .. note::

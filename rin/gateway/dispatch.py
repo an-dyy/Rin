@@ -75,7 +75,7 @@ class Dispatch:
                 self.loop.create_task(wildcard(name, *payload))
 
     async def dispatch_collector(
-        self, queue, callback: Callable[..., Any], *data: Any
+        self, queue: asyncio.Queue[Any], callback: Callable[..., Any], *data: Any
     ) -> None:
         await queue.put(data)
         queue.task_done()

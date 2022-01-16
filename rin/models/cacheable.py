@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from typing_extensions import Self
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 __all__ = ("Cache", "Cacheable")
 
 T = TypeVar("T")
-CacheableT = TypeVar("CacheableT", bound="Cacheable")
 
 
 class Cache(Generic[T]):
@@ -144,5 +144,5 @@ class Cacheable(metaclass=CacheableMeta):  # Thanks stocker
 
         @classmethod
         @property
-        def cache(cls: type[CacheableT]) -> Cache[CacheableT]:
+        def cache(cls: type[Self]) -> Cache[Self]:  # type: ignore[valid-type]
             ...

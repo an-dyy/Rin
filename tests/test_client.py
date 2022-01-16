@@ -18,8 +18,8 @@ async def test_on() -> None:
     assert len(client.dispatch.listeners["message_create"]) == 1
     assert len(client.dispatch.once["ready"]) == 1
 
-    await client.dispatch("message_create", {})
-    await client.dispatch("ready", {"user": {"id": 1}})
+    client.dispatch("message_create", {})
+    client.dispatch("ready", {"user": {"id": 1}})
 
     assert len(client.dispatch.listeners["message_create"]) == 1
     assert len(client.dispatch.once["ready"]) == 0
