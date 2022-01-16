@@ -48,8 +48,8 @@ class Route:
     endpoint: :class:`str`
         The fully formed endpoint of the route.
 
-    lock: :class:`asyncio.Lock`
-        The lock used for the bucket once depleted. Used in
+    event: :class:`asyncio.Event`
+        The event used for the bucket once depleted. Used in
         tandem with the concurrent request ratelimit system. Allowing safe
         concurrent requests.
 
@@ -68,7 +68,7 @@ class Route:
 
     __slots__ = (
         "endpoint",
-        "lock",
+        "event",
         "channel_id",
         "guild_id",
         "webhook_id",
@@ -79,7 +79,8 @@ class Route:
 
     def __init__(self, endpoint: str, *, version: str = "9", **kwargs: Any) -> None:
         self.endpoint = Route.BASE.format(version) + endpoint
-        self.lock = asyncio.Lock()
+        self.event = asyncio.Event()
+        self.event.set()
 
         self.channel_id: None | int = kwargs.get("channel_id")
         self.guild_id: None | int = kwargs.get("guild_id")

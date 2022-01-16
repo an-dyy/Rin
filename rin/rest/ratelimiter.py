@@ -109,18 +109,20 @@ class Ratelimiter:
             The return of the request.
         """
         semaphore = await self.ensure()
+        route = self.route
 
         async with self.rest.semaphores["global"]:
             await semaphore.acquire()
-            await self.route.lock.acquire()
+            await route.event.wait()
 
             resp = await self.rest._request(method, self.endpoint, **kwargs)
             data: dict[Any, Any] | str = await resp.data()
 
             if resp.is_depleted:
                 _log.debug(f"BUCKET DEPLETED: {self.bucket} RETRY: {resp.reset_after}s")
+                route.event.clear()
 
-                self.loop.call_later(resp.reset_after, self.route.lock.release)
+                self.loop.call_later(resp.reset_after, route.event.set)
                 self.loop.call_later(resp.reset_after, semaphore.release)
 
                 await asyncio.sleep(resp.reset_after)
@@ -131,7 +133,7 @@ class Ratelimiter:
                     f"{resp.status}: {method} ROUTE: {self.endpoint} REMAINING: {resp.uses}"
                 )
 
-                self.route.lock.release()
+                route.event.set()
                 return data
 
             if resp.is_ratelimited:
