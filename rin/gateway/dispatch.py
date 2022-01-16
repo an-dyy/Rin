@@ -70,10 +70,6 @@ class Dispatch:
                     self.dispatch_collector(queue, callback, *payload)
                 )
 
-        for wildcard, check in self.listeners["*"]:
-            if check(*payload):
-                self.loop.create_task(wildcard(name, *payload))
-
     async def dispatch_collector(
         self, queue: asyncio.Queue[Any], callback: Callable[..., Any], *data: Any
     ) -> None:

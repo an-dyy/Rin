@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 import aiohttp
 import enum
 
+from .event import Event
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
@@ -71,6 +72,18 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
         elif parser is None:
             self._loop.create_task(dispatch.no_parse(name.lower(), data["d"]))
+
+        if dispatch.collectors.get("*"):
+            queue, callback, check = dispatch.collectors["*"]
+
+            if check(Event(name), data["d"]):
+                self.client.loop.create_task(
+                    dispatch.dispatch_collector(queue, callback, Event(name), data["d"])
+                )
+
+        for wildcard, check in dispatch.listeners["*"]:
+            if check(Event(name), data["d"]):
+                self.client.loop.create_task(wildcard(Event(name), data["d"]))
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)
