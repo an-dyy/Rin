@@ -50,36 +50,43 @@ class Dispatch:
         elif once is False:
             self.listeners[name].append(func)
 
-    def __call__(self, name: str, *payload: Any) -> None:
+    def __call__(self, name: str, *payload: Any) -> list[asyncio.Task[Any]]:
         _log.debug(f"DISPATCHING: {name.upper()}")
         name = name.lower()
+        tasks = []
 
         for once, check in self.once[name][:]:
             if check(*payload):
-                self.loop.create_task(once(*payload))
+                tasks.append(self.loop.create_task(once(*payload)))
                 self.once[name].pop()
 
         for listener, check in self.listeners[name]:
             if check(*payload):
-                self.loop.create_task(listener(*payload))
+                tasks.append(self.loop.create_task(listener(*payload)))
 
         if self.collectors.get(name):
             queue, callback, check = self.collectors[name]
 
             if check(*payload):
-                self.loop.create_task(
-                    self.dispatch_collector(queue, callback, *payload)
+                tasks.append(
+                    self.loop.create_task(
+                        self.dispatch_collector(queue, callback, *payload)
+                    )
                 )
+
+        return tasks
 
     async def dispatch_collector(
         self, queue: asyncio.Queue[Any], callback: Callable[..., Any], *data: Any
-    ) -> None:
+    ) -> None | asyncio.Task[Any]:
         await queue.put(data)
         queue.task_done()
 
         if queue.full():
             items = list(zip(*[queue.get_nowait() for _ in range(queue.maxsize)]))
-            self.loop.create_task(callback(*items))
+            return self.loop.create_task(callback(*items))
+
+        return None
 
     async def no_parse(self, name: str, data: dict[Any, Any]) -> None:
         self(name, data)
