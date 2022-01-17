@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from typing_extensions import Self
-
 import rin
 
 
 class FakeMessage(rin.Cacheable, max=5):
-    cache: rin.Cache[Self]  # type: ignore[valid-type]
-
     def __init__(self, id: int) -> None:
         self.id = id
 

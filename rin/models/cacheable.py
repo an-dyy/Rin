@@ -138,11 +138,11 @@ class Cacheable(metaclass=CacheableMeta):  # Thanks stocker
         The cache of the class.
     """
 
-    __cache__: Cache[Self]  # type: ignore[valid-type]
+    __cache__: Cache[Self]
 
     if TYPE_CHECKING:
 
         @classmethod
         @property
-        def cache(cls: type[Self]) -> Cache[Self]:  # type: ignore[valid-type]
+        def cache(cls: type[Self]) -> Cache[Self]:
             ...
