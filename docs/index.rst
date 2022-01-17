@@ -3,9 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Lefi
-====
-A discord API wrapper focused on clean code, and usability
+Rin Discord API wrapper
+=======================
+A strictly typed discord API wrapper.
+The successor of the Lefi DAPI project.
+
+This wrapper was meant to be cleanly written for both users
+and contributors. Giving that good sleek feeling while using the
+wrapper.
 
 Features
 ~~~~~~~~

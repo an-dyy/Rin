@@ -6,7 +6,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 __all__ = ("Cache", "Cacheable")
-
 T = TypeVar("T")
 
 
@@ -14,16 +13,16 @@ class Cache(Generic[T]):
     """A class which represents an in-memory cache.
 
     .. note::
-        All cache-able classes have this
-        class under the attribute `Class.cache`
+        All cache-able classes have this class under the attribute `Class.cache`
 
     .. code-block:: python
 
-        rin.User.cache.get(123)
+        user: rin.User = rin.User.cache.get(123)
+        rin.User.cache.set(123, User)
 
     Parameters
     ----------
-    max: Optional[:class:`int`]
+    max: None | :class:`int`
         The max amount of items before poping the last
         inserted object.
 
@@ -32,7 +31,7 @@ class Cache(Generic[T]):
     root: :class:`dict`
         The internal dict of the cache.
 
-    max: Optional[:class:`int`]
+    max: None | :class:`int`
         The max amount of items the cache can have
         at a given time.
 
@@ -63,15 +62,15 @@ class Cache(Generic[T]):
 
         Parameters
         ----------
-        key: Union[:class:`str`, :class:`int`]
+        key: :class:`str` | :class:`int`
             The key to set.
 
-        value: Any
+        value: :class:`typing.Any`
             The value to set to the key.
 
         Returns
         -------
-        Any:
+        :class:`typing.Any`:
             The value being set.
         """
         return self.__setitem__(key, value)
@@ -81,11 +80,12 @@ class Cache(Generic[T]):
 
         Parameters
         ----------
-        key: Union[:class:`str`, :class:`int`]
+        key: :class:`str` | :class:`int`
             The key to retrieve from.
 
         Returns
-        Optional[Any]:
+        -------
+        None | :class:`typing.Any`
             The value retrieved from the key.
         """
         return self.root.get(key)
@@ -97,12 +97,12 @@ class Cache(Generic[T]):
 
         Parameters
         ----------
-        key: Optional[Union[:class:`str`, :class:`int`]]
+        key: None | :class:`str` | :class:`int`
             The key to pop from the internal dict.
 
         Returns
         -------
-        Any:
+        :class:`typing.Any`
             The value from the popped key.
         """
         if key is not None:

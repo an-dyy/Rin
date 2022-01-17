@@ -24,7 +24,7 @@ class GatewayClient:
     token: :class:`str`
         The token to use for authorization.
 
-    loop: Optional[:class:`asyncio.AbstractEventLoop`]
+    loop: None | :class:`asyncio.AbstractEventLoop`
         The loop to use for async operations.
 
     intents: :class:`int`
@@ -96,7 +96,7 @@ class GatewayClient:
         once: :class:`bool`
             If the callback should be ran once per lifetime.
 
-        collect: Optional[:class:`int`]
+        collect: None |:class:`int`
             How many times to collect the event before dispatching
             all at once. Arguments for the callback will be passed as lists.
 

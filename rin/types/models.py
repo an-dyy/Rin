@@ -10,14 +10,14 @@ class UserData(TypedDict):
     username: str
     discriminator: str
     avatar: None | str
-    bot: None | bool
-    system: None | bool
-    mfa_enabled: None | bool
-    banner: None | str
+    bot: bool
+    system: bool
+    mfa_enabled: bool
+    banner: str
     accent_color: None | int
     locale: None | str
-    verified: None | bool
+    verified: bool
     email: None | str
     flags: None | str
-    premium_type: None | int
-    public_flags: None | int
+    premium_type: int
+    public_flags: int
