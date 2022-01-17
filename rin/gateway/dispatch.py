@@ -57,20 +57,14 @@ class Dispatch:
         tasks: list[asyncio.Task[Any]] = []
         loop = self.loop
 
-        passed = [
-            [item.check(*payload) for item in data]
-            for data in zip(*[self.listeners[event], self.once[event]])
-        ]
-
-        if all(passed) is False:
-            return []
-
         for once in self.once[event][:]:
-            tasks.append(loop.create_task(once.callback(*payload)))
-            self.once[event].pop()
+            if once.check(*payload):
+                tasks.append(loop.create_task(once.callback(*payload)))
+                self.once[event].pop()
 
         for listener in self.listeners[event]:
-            tasks.append(loop.create_task(listener.callback(*payload)))
+            if listener.check(*payload):
+                tasks.append(loop.create_task(listener.callback(*payload)))
 
         if collector := self.collectors.get(event):
             if not collector.check(*payload):
