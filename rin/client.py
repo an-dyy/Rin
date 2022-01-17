@@ -124,10 +124,10 @@ class GatewayClient:
             return _log.debug(message.format("Collector", name, fmt))
 
         elif once is not False:
-            self.dispatch.once.setdefault(event, []).append(data)
+            self.dispatch.once[event].append(data)
             return _log.debug(message.format("one-time", name, fmt))
 
-        self.dispatch.listeners.setdefault(event, []).append(data)
+        self.dispatch.listeners[event].append(data)
         return _log.debug(message.format("Listener", name, fmt))
 
     def collect(
