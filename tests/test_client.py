@@ -6,6 +6,8 @@ import pytest
 
 import rin
 
+# pyright: reportUnusedFunction=false
+
 
 @pytest.mark.asyncio
 async def test_client_on() -> None:

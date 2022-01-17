@@ -8,6 +8,7 @@ import rin
 
 
 async def main() -> None:
+    # pyright: reportUnusedFunction=false
     token: str = os.getenv("DISCORD_TOKEN")  # type: ignore
     client = rin.GatewayClient(token, intents=32509)
 

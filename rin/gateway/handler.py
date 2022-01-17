@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 import aiohttp
 
 from .event import Event
-from .parser import Parser
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
@@ -41,6 +40,9 @@ class OPCode(enum.IntFlag):
 class Gateway(aiohttp.ClientWebSocketResponse):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self._loop: asyncio.AbstractEventLoop
+        self._closed: bool
+        self._closed: bool
 
         self.ratelimiter = Ratelimiter(2, 1)
         self.client: GatewayClient
@@ -129,7 +131,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def read_messages(self) -> None:
         async for message in self:
-            if message.type is aiohttp.WSMsgType.TEXT:
+            if message.type is aiohttp.WSMsgType.TEXT:  # type: ignore
                 received = message.json()
 
                 if sequence := received.get("s"):
