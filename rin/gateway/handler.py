@@ -60,19 +60,18 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def send_dispatch(self, data: dict[Any, Any]) -> None:
         dispatch = self.client.dispatch
-        name = data["t"]
-        event = Event(name)
+        event = Event(data["t"])
 
-        if name == "READY":
+        if event == "READY":
             self.session_id = data["d"]["session_id"]
 
-        parser = getattr(dispatch, f"parse_{name.lower()}", None)
+        parser = getattr(dispatch, f"parse_{event.lower()}", None)
 
         if parser is not None:
             self._loop.create_task(parser(data["d"]))
 
         elif parser is None:
-            self._loop.create_task(dispatch.no_parse(name.lower(), data["d"]))
+            self._loop.create_task(dispatch.no_parse(event, data["d"]))
 
         if dispatch.collectors.get("*"):
             queue, callback, check = dispatch.collectors["*"]

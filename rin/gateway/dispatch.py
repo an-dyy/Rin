@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable
 import asyncio
 
+from .event import Event
 from ..models import User
 
 if TYPE_CHECKING:
@@ -51,7 +52,7 @@ class Dispatch:
 
     def __call__(self, name: str, *payload: Any) -> list[asyncio.Task[Any]]:
         _log.debug(f"DISPATCHING: {name.upper()}")
-        name = name.lower()
+        name = Event(name.upper())
         tasks = []
 
         for once, check in self.once[name][:]:

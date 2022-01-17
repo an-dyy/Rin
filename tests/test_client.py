@@ -15,7 +15,7 @@ async def test_client_on() -> None:
     async def test_message_create(data: dict[str, bool]) -> None:
         assert data["test"] is True
 
-    assert len(client.dispatch.listeners["message_create"]) == 1
+    assert len(client.dispatch.listeners[rin.Event.MESSAGE_CREATE]) == 1
     tasks = client.dispatch("message_create", {"test": True})
 
     for task in tasks:
@@ -30,10 +30,10 @@ async def test_client_once() -> None:
     async def test_ready(user: dict[str, int]) -> None:
         assert user["id"] == 1
 
-    assert len(client.dispatch.once["ready"]) == 1
+    assert len(client.dispatch.once[rin.Event.READY]) == 1
     tasks = client.dispatch("ready", {"id": 1})
 
-    assert len(client.dispatch.once["ready"]) == 0
+    assert len(client.dispatch.once[rin.Event.READY]) == 0
     tasks.extend(client.dispatch("ready", {"id": 2}))
 
     for task in tasks:
@@ -51,7 +51,7 @@ async def test_client_collect() -> None:
         for i in range(5):
             assert messages[i]["id"] == i
 
-    queue, callback, check = client.dispatch.collectors["message_create"]
+    queue, callback, check = client.dispatch.collectors[rin.Event.MESSAGE_CREATE]
 
     assert callback is test_message_create_collect
     assert check.__name__ == "<lambda>"

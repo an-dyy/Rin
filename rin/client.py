@@ -110,7 +110,7 @@ class GatewayClient:
             raise TypeError("Listener callback must be Coroutine.") from None
 
         if collect is not None:
-            self.dispatch.collectors[event.lower()] = (
+            self.dispatch.collectors[event] = (
                 asyncio.Queue[Any](maxsize=collect),
                 func,
                 check,
@@ -122,7 +122,7 @@ class GatewayClient:
 
             return None
 
-        self.dispatch[(event.lower(), once)] = (func, check)
+        self.dispatch[(event, once)] = (func, check)
 
     def collect(
         self, event: Event, *, amount: int, check: Callable[..., bool] = lambda *_: True
