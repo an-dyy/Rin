@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+import asyncio
 
 import pytest
 
@@ -16,7 +16,7 @@ async def test_client_on() -> None:
         assert data["test"] is True
 
     assert len(client.dispatch.listeners[rin.Event.MESSAGE_CREATE]) == 1
-    tasks = client.dispatch("message_create", {"test": True})
+    tasks = client.dispatch(rin.Event.MESSAGE_CREATE, {"test": True})
 
     for task in tasks:
         await task
@@ -31,10 +31,10 @@ async def test_client_once() -> None:
         assert user["id"] == 1
 
     assert len(client.dispatch.once[rin.Event.READY]) == 1
-    tasks = client.dispatch("ready", {"id": 1})
+    tasks = client.dispatch(rin.Event.READY, {"id": 1})
 
     assert len(client.dispatch.once[rin.Event.READY]) == 0
-    tasks.extend(client.dispatch("ready", {"id": 2}))
+    tasks.extend(client.dispatch(rin.Event.READY, {"id": 2}))
 
     for task in tasks:
         await task
@@ -51,14 +51,14 @@ async def test_client_collect() -> None:
         for i in range(5):
             assert messages[i]["id"] == i
 
-    queue, callback, check = client.dispatch.collectors[rin.Event.MESSAGE_CREATE]
+    collector = client.dispatch.collectors[rin.Event.MESSAGE_CREATE]
 
-    assert callback is test_message_create_collect
-    assert check.__name__ == "<lambda>"
-    assert queue.maxsize == 5
+    assert collector.callback is test_message_create_collect
+    assert collector.check.__name__ == "<lambda>"
+    assert collector.queue.maxsize == 5
 
     for i in range(5):
-        task = await client.dispatch.dispatch_collector(queue, callback, {"id": i})
+        task = await collector.dispatch(asyncio.get_running_loop(), {"id": i})
 
         if task is not None:
             await task

@@ -1,95 +1,81 @@
 from __future__ import annotations
 
-import collections
-import logging
-from typing import TYPE_CHECKING, Any, Callable
 import asyncio
+import logging
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
 from .event import Event
-from ..models import User
+from .parser import Parser
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
 
-    Listeners = collections.defaultdict[
-        str, list[tuple[Callable[..., Any], Callable[..., bool]]]
-    ]
-
-    Collectors = dict[
-        str, tuple[asyncio.Queue[Any], Callable[..., Any], Callable[..., bool]]
-    ]
-
-
-__all__ = ("Dispatch",)
+__all__ = ("Dispatch", "Listener", "Collector")
 _log = logging.getLogger(__name__)
 
 
+class Listener(NamedTuple):
+    callback: Callable[..., Awaitable[Any]]
+    check: Callable[..., bool]
+
+
+class Collector(NamedTuple):
+    callback: Callable[..., Awaitable[Any]]
+    check: Callable[..., bool]
+    queue: asyncio.Queue[Any]
+
+    async def dispatch(
+        self, loop: asyncio.AbstractEventLoop, *payload: Any
+    ) -> None | asyncio.Task[Any]:
+        task: None | asyncio.Task[Any] = None
+
+        await self.queue.put(payload)
+        self.queue.task_done()
+
+        if self.queue.full():
+            items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
+            task = loop.create_task(self.callback(*list(zip(*items))))
+
+        return task
+
+
 class Dispatch:
+    __slots__ = ("loop", "client", "parser", "listeners", "once", "collectors")
+
     def __init__(self, client: GatewayClient) -> None:
+        self.parser: Parser = Parser(client, self)
         self.loop = client.loop
         self.client = client
 
-        self.listeners: Listeners = collections.defaultdict(list)
-        self.once: Listeners = collections.defaultdict(list)
-        self.collectors: Collectors = {}
+        self.listeners: dict[Event, list[Listener]] = defaultdict(list)
+        self.once: dict[Event, list[Listener]] = defaultdict(list)
+        self.collectors: dict[Event, Collector] = {}
 
-    def __setitem__(
-        self,
-        event: tuple[str, bool],
-        func: tuple[Callable[..., Any], Callable[..., bool]],
-    ) -> None:
-        callback, _ = func
-        _log.debug(
-            f"DISPATCHER: Appending {callback.__name__!r} to (event={event[0]}, once={event[1]})"
-        )
-        name, once = event
+    def __call__(self, event: Event, *payload: Any) -> list[asyncio.Task[Any]]:
+        _log.debug(f"DISPATCHER: DISPATCHING {event}")
+        tasks: list[asyncio.Task[Any]] = []
+        loop = self.loop
 
-        if once is not False:
-            self.once[name].append(func)
+        passed = [
+            [item.check(*payload) for item in data]
+            for data in zip(*[self.listeners[event], self.once[event]])
+        ]
 
-        elif once is False:
-            self.listeners[name].append(func)
+        if all(passed) is False:
+            return []
 
-    def __call__(self, name: str, *payload: Any) -> list[asyncio.Task[Any]]:
-        _log.debug(f"DISPATCHING: {name.upper()}")
-        name = Event(name.upper())
-        tasks = []
+        for once in self.once[event][:]:
+            tasks.append(loop.create_task(once.callback(*payload)))
+            self.once[event].pop()
 
-        for once, check in self.once[name][:]:
-            if check(*payload):
-                tasks.append(self.loop.create_task(once(*payload)))
-                self.once[name].pop()
+        for listener in self.listeners[event]:
+            tasks.append(loop.create_task(listener.callback(*payload)))
 
-        for listener, check in self.listeners[name]:
-            if check(*payload):
-                tasks.append(self.loop.create_task(listener(*payload)))
+        if collector := self.collectors.get(event):
+            if not collector.check(*payload):
+                return tasks
 
-        if self.collectors.get(name):
-            queue, callback, check = self.collectors[name]
-
-            if check(*payload):
-                tasks.append(
-                    self.loop.create_task(
-                        self.dispatch_collector(queue, callback, *payload)
-                    )
-                )
+            tasks.append(loop.create_task(collector.dispatch(*payload)))
 
         return tasks
-
-    async def dispatch_collector(
-        self, queue: asyncio.Queue[Any], callback: Callable[..., Any], *data: Any
-    ) -> None | asyncio.Task[Any]:
-        await queue.put(data)
-        queue.task_done()
-
-        if queue.full():
-            items = list(zip(*[queue.get_nowait() for _ in range(queue.maxsize)]))
-            return self.loop.create_task(callback(*items))
-
-        return None
-
-    async def no_parse(self, name: str, data: dict[Any, Any]) -> None:
-        self(name, data)
-
-    async def parse_ready(self, data: dict[Any, Any]) -> None:
-        self("ready", User(self.client, data["user"]))

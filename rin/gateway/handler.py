@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import enum
 import logging
 import sys
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 import aiohttp
-import enum
 
 from .event import Event
+from .parser import Parser
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
@@ -65,25 +66,23 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         if event == "READY":
             self.session_id = data["d"]["session_id"]
 
-        parser = getattr(dispatch, f"parse_{event.lower()}", None)
+        parser = getattr(dispatch.parser, f"parse_{event.lower()}", None)
 
         if parser is not None:
             self._loop.create_task(parser(data["d"]))
 
         elif parser is None:
-            self._loop.create_task(dispatch.no_parse(event, data["d"]))
+            self._loop.create_task(dispatch.parser.no_parse(event, data["d"]))
 
-        if dispatch.collectors.get("*"):
-            queue, callback, check = dispatch.collectors["*"]
+        for wildcard in dispatch.listeners[Event.WILDCARD]:
+            if wildcard.check(event, data["d"]):
+                self.client.loop.create_task(wildcard.callback(event, data["d"]))
 
-            if check(event, data["d"]):
+        if collector := dispatch.collectors.get(event):
+            if collector.check(event, data["d"]):
                 self.client.loop.create_task(
-                    dispatch.dispatch_collector(queue, callback, event, data["d"])
+                    collector.dispatch(self.client.loop, event, data["d"])
                 )
-
-        for wildcard, check in dispatch.listeners["*"]:
-            if check(event, data["d"]):
-                self.client.loop.create_task(wildcard(event, data["d"]))
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)

@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 from .cacheable import Cache, Cacheable
 
 if TYPE_CHECKING:
-    from rin.types import UserData
     from typing_extensions import Self
+
+    from rin.types import UserData
 
     from ..client import GatewayClient
 

@@ -5,7 +5,8 @@ import inspect
 import logging
 from typing import Any, Callable
 
-from .gateway import Dispatch, Gateway, Event
+from .gateway import Collector, Dispatch, Event, Gateway, Listener
+from .models import User
 from .rest import RESTClient, Route
 
 __all__ = ("GatewayClient",)
@@ -47,7 +48,7 @@ class GatewayClient:
         The dispatch manager for the client.
     """
 
-    __slots__ = ("loop", "rest", "intents", "gateway", "dispatch")
+    __slots__ = ("loop", "rest", "intents", "gateway", "dispatch", "user")
 
     def __init__(
         self,
@@ -62,6 +63,7 @@ class GatewayClient:
 
         self.gateway: Gateway
         self.dispatch = Dispatch(self)
+        self.user: None | User = None
 
     def _create_loop(self) -> asyncio.AbstractEventLoop:
         try:
@@ -109,20 +111,24 @@ class GatewayClient:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Listener callback must be Coroutine.") from None
 
+        data = Listener(func, check)
+        fmt = f"(Event={event}, amount={collect})"
+        message = "DISPATCHER: Append {0} {1} {2}"
+        name = func.__name__
+
         if collect is not None:
-            self.dispatch.collectors[event] = (
-                asyncio.Queue[Any](maxsize=collect),
-                func,
-                check,
+            self.dispatch.collectors[event] = Collector(
+                func, check, asyncio.Queue[Any](maxsize=collect)
             )
 
-            _log.debug(
-                f"DISPATCHER: Appending collector {func.__name__!r} to (event={event}, amount={collect})"
-            )
+            return _log.debug(message.format("Collector", name, fmt))
 
-            return None
+        elif once is not False:
+            self.dispatch.once.setdefault(event, []).append(data)
+            return _log.debug(message.format("one-time", name, fmt))
 
-        self.dispatch[(event, once)] = (func, check)
+        self.dispatch.listeners.setdefault(event, []).append(data)
+        return _log.debug(message.format("Listener", name, fmt))
 
     def collect(
         self, event: Event, *, amount: int, check: Callable[..., bool] = lambda *_: True
