@@ -1,4 +1,4 @@
-name: pytest
+name: Run workflows
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  run-pytest:
+  run-flake8:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,14 @@ jobs:
         python -m pip install --upgrade poetry
         poetry install
 
+    - name: Run flake8
+      run: |
+        poetry run python -m flake8
+
     - name: Run pytest
       run: |
         poetry run python -m pytest
+
+    - name: Run mypy
+      run: |
+        poetry run python -m mypy ./ --strict --implicit-reexport
