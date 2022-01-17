@@ -23,6 +23,10 @@ jobs:
         poetry install
         npm install pyright
 
+    - name: Run pre-commit
+      run: |
+        poetry run pre-commit run
+
     - name: Run flake8
       run: |
         poetry run python -m flake8
