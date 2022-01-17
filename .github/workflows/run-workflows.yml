@@ -1,4 +1,4 @@
-name: Run workflows
+name: run-workflows
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  run-flake8:
+  run-workflows:
     runs-on: ubuntu-latest
 
     steps:

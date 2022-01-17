@@ -3,12 +3,10 @@ name: Discord Status Embed
 on:
   workflow_run:
     workflows:
-      - flake8
-      - pytest
-      - mypy
+      - run-workflows
     types:
       - completed
-  
+
 
 jobs:
   send_embed:
@@ -31,7 +29,7 @@ jobs:
         repository:  ${{ github.repository }}
         ref: ${{ github.ref }}
         sha: ${{ github.event.workflow_run.head_sha }}
-  
+
         pr_author_login: ${{ github.event.pull_request.user.login }}
         pr_number: ${{ github.event.pull_request.number }}
         pr_title: ${{ github.event.pull_request.title }}
