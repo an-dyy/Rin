@@ -34,4 +34,18 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 templates_path = ["_templates"]
 html_static_path = ["_static"]
-html_theme = "sphinxawesome_theme"
+html_theme = "furo"
+
+html_theme_options = {
+    "light_css_variables": {
+        "color-api-name": "#f0f0f0",
+        "color-api-pre-name": "#f0f0f0",
+    },
+    "dark_css_variables": {
+        "color-api-name": "#f0f0f0",
+        "color-api-pre-name": "#f0f0f0",
+    },
+}
+
+pygments_style = "default"
+pygments_dark_style = "native"

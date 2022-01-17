@@ -24,7 +24,7 @@ isort = "^5.10.1"
 pytest = "^6.2.5"
 pytest-asyncio = "^0.17.0"
 Sphinx = "^4.3.2"
-sphinxawesome-theme = "^3.2.3"
+furo = "^2022.1.2"
 
 [tool.black]
 line-length = 88

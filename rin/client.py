@@ -96,7 +96,7 @@ class GatewayClient:
         once: :class:`bool`
             If the callback should be ran once per lifetime.
 
-        collect: None |:class:`int`
+        collect: None | :class:`int`
             How many times to collect the event before dispatching
             all at once. Arguments for the callback will be passed as lists.
 

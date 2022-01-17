@@ -15,7 +15,7 @@ class Cache(Generic[T]):
     .. note::
         All cache-able classes have this class under the attribute `Class.cache`
 
-    .. code-block:: python
+    .. code:: python
 
         user: rin.User = rin.User.cache.get(123)
         rin.User.cache.set(123, User)
