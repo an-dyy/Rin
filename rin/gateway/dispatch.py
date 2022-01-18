@@ -70,6 +70,6 @@ class Dispatch:
             if not collector.check(*payload):
                 return tasks
 
-            tasks.append(loop.create_task(collector.dispatch(*payload)))
+            tasks.append(loop.create_task(collector.dispatch(self.loop, *payload)))
 
         return tasks

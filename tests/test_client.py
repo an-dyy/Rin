@@ -1,66 +1,63 @@
 from __future__ import annotations
 
-import asyncio
+from asyncio import gather, get_running_loop
 
-import pytest
+import unittest
+from unittest.mock import AsyncMock
 
 import rin
 
-# pyright: reportUnusedFunction=false
 
+class TestClient(unittest.IsolatedAsyncioTestCase):
+    # pyright: reportUnusedFunction=false
+    """Test :class:`.GatewayClient`"""
 
-@pytest.mark.asyncio
-async def test_client_on() -> None:
-    client = rin.GatewayClient("DISCORD_TOKEN")
+    async def test_on(self) -> None:
+        client = rin.GatewayClient("DISCORD_TOKEN")
 
-    @client.on(rin.Event.MESSAGE_CREATE)
-    async def test_message_create(data: dict[str, bool]) -> None:
-        assert data["test"] is True
+        listeners = client.dispatch.listeners[rin.Event.READY]
+        self.assertEqual(len(listeners), 0)
 
-    assert len(client.dispatch.listeners[rin.Event.MESSAGE_CREATE]) == 1
-    tasks = client.dispatch(rin.Event.MESSAGE_CREATE, {"test": True})
+        mock = AsyncMock(__name__="<MOCK>")
+        client.subscribe(rin.Event.READY, mock)
 
-    for task in tasks:
-        await task
+        self.assertEqual(len(listeners), 1)
+        await gather(*client.dispatch(rin.Event.READY, {}))
 
+        mock.assert_awaited()
 
-@pytest.mark.asyncio
-async def test_client_once() -> None:
-    client = rin.GatewayClient("DISCORD_TOKEN")
+    async def test_once(self) -> None:
+        client = rin.GatewayClient("DISCORD_TOKEN")
 
-    @client.once(rin.Event.READY)
-    async def test_ready(user: dict[str, int]) -> None:
-        assert user["id"] == 1
+        listeners = client.dispatch.once[rin.Event.READY]
+        self.assertEqual(len(listeners), 0)
 
-    assert len(client.dispatch.once[rin.Event.READY]) == 1
-    tasks = client.dispatch(rin.Event.READY, {"id": 1})
+        mock = AsyncMock(__name__="<MOCK>")
+        client.subscribe(rin.Event.READY, mock, once=True)
 
-    assert len(client.dispatch.once[rin.Event.READY]) == 0
-    tasks.extend(client.dispatch(rin.Event.READY, {"id": 2}))
+        self.assertEqual(len(listeners), 1)
+        await gather(*client.dispatch(rin.Event.READY, {}))
+        await gather(*client.dispatch(rin.Event.READY, {}))
 
-    for task in tasks:
-        await task
+        mock.assert_awaited_once()
 
+    async def test_collector(self) -> None:
+        client = rin.GatewayClient("DISCORD_TOKEN")
 
-@pytest.mark.asyncio
-async def test_client_collect() -> None:
-    client = rin.GatewayClient("DISCORD_TOKEN")
+        mock = AsyncMock(__name__="<MOCK>")
+        client.subscribe(rin.Event.READY, mock, collect=5)
 
-    @client.collect(rin.Event.MESSAGE_CREATE, amount=5)
-    async def test_message_create_collect(messages: list[dict[str, int]]) -> None:
-        assert len(messages) == 5
+        collector = client.dispatch.collectors.get(rin.Event.READY)
 
-        for i in range(5):
-            assert messages[i]["id"] == i
+        if collector is not None:
+            self.assertIs(collector.callback, mock)
+            self.assertEqual(collector.check.__name__, "<lambda>")
+            self.assertEqual(collector.queue.maxsize, 5)
 
-    collector = client.dispatch.collectors[rin.Event.MESSAGE_CREATE]
+        elif collector is None:
+            self.assertIsNotNone(collector)
 
-    assert collector.callback is test_message_create_collect
-    assert collector.check.__name__ == "<lambda>"
-    assert collector.queue.maxsize == 5
+        for _ in range(5):
+            await gather(*client.dispatch(rin.Event.READY, get_running_loop(), {}))
 
-    for i in range(5):
-        task = await collector.dispatch(asyncio.get_running_loop(), {"id": i})
-
-        if task is not None:
-            await task
+        mock.assert_awaited_once()

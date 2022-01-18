@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import logging
 from typing import Any, Callable
 
@@ -108,7 +107,7 @@ class GatewayClient:
         :exc:`TypeError`
             Raised when the callback is not a Coroutine.
         """
-        if not inspect.iscoroutinefunction(func):
+        if not asyncio.iscoroutinefunction(func):
             raise TypeError("Listener callback must be Coroutine.") from None
 
         data = Listener(func, check)
