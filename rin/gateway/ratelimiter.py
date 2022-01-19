@@ -1,21 +1,27 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Coroutine
+from typing import Any
+
+import attr
 
 __all__ = ("Ratelimiter",)
 
 
+@attr.s(slots=True)
 class Ratelimiter:
-    __slots__ = ("rate", "per", "semaphore")
+    rate: int = attr.field()
+    per: int = attr.field()
 
-    def __init__(self, rate: int, per: int) -> None:
-        self.semaphore = asyncio.Semaphore(rate)
-        self.rate = rate
-        self.per = per
+    semaphore: asyncio.Semaphore = attr.field(init=False)
 
-    async def sleep(self, command: Coroutine[Any, Any, Any]) -> None:
-        async with self.semaphore:
-            await command
+    def __attrs_post_init__(self) -> None:
+        self.semaphore = asyncio.Semaphore(self.rate)
 
-            await asyncio.sleep(self.per)
+    async def __aenter__(self) -> Ratelimiter:
+        await self.semaphore.acquire()
+        return self
+
+    async def __aexit__(self, *_: Any) -> None:
+        await asyncio.sleep(self.per)
+        self.semaphore.release()

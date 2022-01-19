@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import attr
+
 from .cacheable import Cacheable
 
 if TYPE_CHECKING:
@@ -12,6 +14,7 @@ if TYPE_CHECKING:
 __all__ = ("User",)
 
 
+@attr.s(slots=True)
 class User(Cacheable, max=1000):
     """Represents a User.
 
@@ -54,45 +57,41 @@ class User(Cacheable, max=1000):
         The premium type of the user.
     """
 
-    __slots__ = (
-        "_client",
-        "_data",
-        "id",
-        "username",
-        "discriminator",
-        "avatar",
-        "banner",
-        "color",
-        "locale",
-        "email",
-        "flags",
-        "public_flags",
-        "premium",
-    )
+    _client: GatewayClient = attr.field()
+    _data: UserData = attr.field()
 
-    def __init__(self, client: GatewayClient, data: UserData) -> None:
-        User.cache.set(self.id, self)
+    id: int = attr.field(init=False)
+    username: str = attr.field(init=False)
+    discriminator: str = attr.field(init=False)
 
-        self._client = client
-        self._data = data
+    avatar: None | str = attr.field(init=False)
+    banner: None | str = attr.field(init=False)
+    color: int = attr.field(init=False)
 
-        self.id = int(data["id"])
-        self.username = data["username"]
-        self.discriminator = data["discriminator"]
+    locale: None | str = attr.field(init=False)
+    email: None | str = attr.field(init=False)
 
-        self.avatar = data.get("avatar")
-        self.banner = data.get("banner")
-        self.color = data.get("accent_color", 0)
+    flags: int = attr.field(init=False)
+    public_flags: int = attr.field(init=False)
+    premium: int = attr.field(init=False)
 
-        self.locale = data.get("locale")
-        self.email = data.get("email")
+    def __attrs_post_init__(self) -> None:
+        self.id = int(self._data["id"])
+        self.username = self._data["username"]
+        self.discriminator = self._data["discriminator"]
 
-        self.flags = data.get("flags", 0)
-        self.public_flags = data.get("public_flags", 0)
+        self.avatar = self._data.get("avatar")
+        self.banner = self._data.get("banner")
+        self.color = self._data.get("accent_color", 0)
+
+        self.locale = self._data.get("locale")
+        self.email = self._data.get("email")
+
+        self.flags = self._data.get("flags", 0)
+        self.public_flags = self._data.get("public_flags", 0)
         self.premium = self._data.get("premium_type", 0)
 
-    def __repr__(self) -> str:
-        return f"<User username={self.username!r} discriminator={self.discriminator!r}>"
+        User.cache.set(self.id, self)
 
     def __str__(self) -> str:
         return f"{self.username}#{self.discriminator}"

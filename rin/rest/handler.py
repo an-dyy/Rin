@@ -4,6 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
+import attr
 
 from .errors import BadRequest, Forbidden, NotFound, Unauthorized
 from .ratelimiter import RatelimitedClientResponse, Ratelimiter
@@ -15,7 +16,10 @@ if TYPE_CHECKING:
 __all__ = ("RESTClient", "Route")
 
 
+@attr.s(slots=True)
 class Route:
+    BASE = "https://discord.com/api/v{0}/"
+
     """Route used for RESTful requests.
 
     This class is used in the wrapper where requests are made.
@@ -31,16 +35,16 @@ class Route:
     version: :class:`str`
         The version of the RESTful API to use.
 
-    channel_id: Optional[:class:`int`]
+    channel_id: None | :class:`int`
         The channel ID being used. This is used for bucket specificity.
 
-    guild_id: Optional[:class:`int`]
+    guild_id: None | :class:`int`
         The guild ID being used. This is used for bucket specificity.
 
-    webhook_id: Optional[:class:`int`]
+    webhook_id: None | :class:`int`
         The webhook ID being used. This is used for bucket specificity.
 
-    webhook_token: Optional[:class:`str`]
+    webhook_token: None | :class:`str`
         The webhook token being used. This is used for bucket specificity.
 
     Attributes
@@ -53,39 +57,33 @@ class Route:
         tandem with the concurrent request ratelimit system. Allowing safe
         concurrent requests.
 
-    channel_id: Optional[:class:`int`]
+    channel_id: None | :class:`int`
         The channel ID being used. This is used for bucket specificity.
 
-    guild_id: Optional[:class:`int`]
+    guild_id: None | :class:`int`
         The guild ID being used. This is used for bucket specificity.
 
-    webhook_id: Optional[:class:`int`]
+    webhook_id: None | :class:`int`
         The webhook ID being used. This is used for bucket specificity.
 
-    webhook_token: Optional[:class:`str`]
+    webhook_token: None | :class:`str`
         The webhook token being used. This is used for bucket specificity.
     """
 
-    __slots__ = (
-        "endpoint",
-        "event",
-        "channel_id",
-        "guild_id",
-        "webhook_id",
-        "webhook_token",
-    )
+    endpoint: str = attr.field()
+    version: int = attr.field(kw_only=True, default=9)
 
-    BASE = "https://discord.com/api/v{0}/"
+    channel_id: None | int = attr.field(kw_only=True, default=None)
+    guild_id: None | int = attr.field(kw_only=True, default=None)
+    webhook_id: None | int = attr.field(kw_only=True, default=None)
+    webhook_token: None | str = attr.field(kw_only=True, default=None)
 
-    def __init__(self, endpoint: str, *, version: str = "9", **kwargs: Any) -> None:
-        self.endpoint = Route.BASE.format(version) + endpoint
+    event: asyncio.Event = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        self.endpoint = Route.BASE.format(self.version) + self.endpoint
         self.event = asyncio.Event()
         self.event.set()
-
-        self.channel_id: None | int = kwargs.get("channel_id")
-        self.guild_id: None | int = kwargs.get("guild_id")
-        self.webhook_id: None | int = kwargs.get("webhook_id")
-        self.webhook_token: None | str = kwargs.get("webhookd_token")
 
     @property
     def bucket(self) -> str:
@@ -93,6 +91,7 @@ class Route:
         return f"{self.channel_id}/{self.guild_id}/{self.webhook_id}/{self.endpoint}"
 
 
+@attr.s(slots=True)
 class RESTClient:
     """The class used to make RESTful API requests.
 
@@ -124,8 +123,6 @@ class RESTClient:
         ensure safety and allowing concurrent requests.
     """
 
-    __slots__ = ("session", "token", "client", "semaphores")
-
     GATEWAY_TYPE: ClassVar[type[Gateway]]
     ERRORS: ClassVar[dict[int, Any]] = {
         400: BadRequest,
@@ -134,11 +131,13 @@ class RESTClient:
         404: NotFound,
     }
 
-    def __init__(self, token: str, client: GatewayClient) -> None:
-        self.session: aiohttp.ClientSession
-        self.token = token
-        self.client = client
+    token: str = attr.field()
+    client: GatewayClient = attr.field()
 
+    semaphores: dict[str, asyncio.Semaphore] = attr.field(init=False)
+    session: aiohttp.ClientSession = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
         self.semaphores: dict[str, asyncio.Semaphore] = {
             "global": asyncio.Semaphore(50)
         }

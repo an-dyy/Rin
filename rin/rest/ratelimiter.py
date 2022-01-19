@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
+import attr
 
 from .errors import HTTPException
 
@@ -16,6 +17,7 @@ __all__ = ("Ratelimiter", "RatelimitedClientResponse")
 _log = logging.getLogger(__name__)
 
 
+@attr.s(slots=True)
 class Ratelimiter:
     """A class used for ratelimit handling.
 
@@ -48,15 +50,22 @@ class Ratelimiter:
         The authorization header dict.
     """
 
-    def __init__(self, rest: RESTClient, route: Route) -> None:
-        self.loop = rest.client.loop
-        self.rest = rest
-        self.route = route
+    rest: RESTClient = attr.field()
+    route: Route = attr.field()
 
-        self.endpoint = route.endpoint
-        self.bucket = route.bucket
+    loop: asyncio.AbstractEventLoop = attr.field(init=False)
+    auth: dict[str, str] = attr.field(init=False)
 
+    endpoint: str = attr.field(init=False)
+    bucket: str = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        assert self.rest.client.loop is not None
+
+        self.loop = self.rest.client.loop
         self.auth = {"Authorization": f"Bot {self.rest.token}"}
+        self.endpoint = self.route.endpoint
+        self.bucket = self.route.bucket
 
     async def ensure(self) -> asyncio.Semaphore:
         """Ensures there is a :class:`asyncio.Semaphore`."""

@@ -5,6 +5,8 @@ import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
+import attr
+
 from .event import Event
 from .parser import Parser
 
@@ -40,13 +42,22 @@ class Collector(NamedTuple):
         return task
 
 
+@attr.s(slots=True)
 class Dispatch:
-    __slots__ = ("loop", "client", "parser", "listeners", "once", "collectors")
+    client: GatewayClient = attr.field()
 
-    def __init__(self, client: GatewayClient) -> None:
-        self.parser: Parser = Parser(client, self)
-        self.loop = client.loop
-        self.client = client
+    parser: Parser = attr.field(init=False)
+    loop: asyncio.AbstractEventLoop = attr.field(init=False)
+
+    listeners: dict[Event, list[Listener]] = attr.field(init=False)
+    collectors: dict[Event, Collector] = attr.field(init=False)
+    once: dict[Event, list[Listener]] = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        assert self.client.loop is not None
+
+        self.loop = self.client.loop
+        self.parser = Parser(self.client, self)
 
         self.listeners: dict[Event, list[Listener]] = defaultdict(list)
         self.once: dict[Event, list[Listener]] = defaultdict(list)

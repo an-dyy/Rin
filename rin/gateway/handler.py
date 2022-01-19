@@ -121,7 +121,9 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         return await super().close(*args, **kwargs)
 
     async def send(self, payload: PayloadData) -> None:
-        await self.ratelimiter.sleep(self.send_json(payload))
+        async with self.ratelimiter as _:
+            await self.send_json(payload)
+
         _log.debug(f"SENT GATEWAY: {payload}")
 
     async def pulse(self) -> None:

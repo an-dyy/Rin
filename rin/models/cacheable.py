@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
+import attr
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -9,6 +11,7 @@ __all__ = ("Cache", "Cacheable")
 T = TypeVar("T")
 
 
+@attr.s(slots=True)
 class Cache(Generic[T]):
     """A class which represents an in-memory cache.
 
@@ -39,13 +42,13 @@ class Cache(Generic[T]):
         The current amount of items in the cache.
     """
 
-    def __init__(self, max: None | int = None) -> None:
-        self.root: dict[str | int, T] = {}
-        self.max = max
-        self.len = 0
+    max: None | int = attr.field()
+    len: int = attr.field(default=0)
 
-    def __repr__(self) -> str:
-        return f"<Cache max={self.max} len={self.len}>"
+    root: dict[str | int, T] = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        self.root: dict[str | int, T] = {}
 
     def __setitem__(self, key: str | int, value: T) -> T:
         self.root[key] = value

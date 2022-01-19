@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import attr
-
-import aiohttp
-
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Callable
+
+import aiohttp
+import attr
 
 from .gateway import Collector, Dispatch, Event, Gateway, Listener
 from .models import User
