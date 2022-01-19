@@ -65,6 +65,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         dispatch = self.client.dispatch
         event = Event(data["t"])
 
+        assert self.client.loop is not None
         if event == "READY":
             self.session_id = data["d"]["session_id"]
 
@@ -99,6 +100,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def start(self, client: GatewayClient) -> None:
         _log.debug("CREATING GATEWAY FROM CLIENT.")
+        assert client.loop is not None
 
         self.client = client
         self.intents = client.intents

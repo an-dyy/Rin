@@ -111,6 +111,7 @@ class Ratelimiter:
         semaphore = await self.ensure()
         route = self.route
 
+        assert self.loop is not None
         async with self.rest.semaphores["global"]:
             await semaphore.acquire()
             await route.event.wait()

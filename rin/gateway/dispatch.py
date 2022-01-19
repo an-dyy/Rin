@@ -57,6 +57,7 @@ class Dispatch:
         tasks: list[asyncio.Task[Any]] = []
         loop = self.loop
 
+        assert loop is not None
         for once in self.once[event][:]:
             if once.check(*payload):
                 tasks.append(loop.create_task(once.callback(*payload)))
@@ -70,6 +71,6 @@ class Dispatch:
             if not collector.check(*payload):
                 return tasks
 
-            tasks.append(loop.create_task(collector.dispatch(self.loop, *payload)))
+            tasks.append(loop.create_task(collector.dispatch(loop, *payload)))
 
         return tasks
