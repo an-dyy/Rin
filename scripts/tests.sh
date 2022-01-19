@@ -2,7 +2,7 @@
 
 tests() {
     poetry run pytest -v -s --asyncio-mode=strict
-    poetry run mypy ./ --strict --implicit-reexport --show-error-codes
+    poetry run npx pyright ./
     poetry run flake8
 }
 
