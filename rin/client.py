@@ -1,17 +1,26 @@
 from __future__ import annotations
 
+import attr
+
+import aiohttp
+
 import asyncio
 import logging
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from .gateway import Collector, Dispatch, Event, Gateway, Listener
 from .models import User
 from .rest import RESTClient, Route
 
+if TYPE_CHECKING:
+    Callback = Callable[..., Any]
+    Check = Callable[..., bool]
+
 __all__ = ("GatewayClient",)
 _log = logging.getLogger(__name__)
 
 
+@attr.s(slots=True)
 class GatewayClient:
     """A client which makes a connection to the gateway.
 
@@ -47,40 +56,65 @@ class GatewayClient:
         The dispatch manager for the client.
     """
 
-    __slots__ = ("loop", "rest", "intents", "gateway", "dispatch", "user")
+    token: str = attr.field()
+    intents: int = attr.field(kw_only=True, default=1)
+    loop: None | asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)
 
-    def __init__(
-        self,
-        token: str,
-        *,
-        loop: None | asyncio.AbstractEventLoop = None,
-        intents: int = 1,
-    ) -> None:
-        self.loop = loop or self._create_loop()
-        self.rest = RESTClient(token, self)
-        self.intents = intents
+    rest: RESTClient = attr.field(init=False)
+    gateway: Gateway = attr.field(init=False)
+    dispatch: Dispatch = attr.field(init=False)
+    closed: bool = attr.field(init=False, default=False)
 
-        self.gateway: Gateway
+    user: None | User = attr.field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        if self.loop is None:
+            self.loop = asyncio.get_running_loop()
+
+        self.rest = RESTClient(self.token, self)
         self.dispatch = Dispatch(self)
-        self.user: None | User = None
 
-    def _create_loop(self) -> asyncio.AbstractEventLoop:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+    async def start(self) -> None:
+        """Starts the connection.
 
-        return loop
+        This method starts the connection to the gateway.
+        """
+        route = Route("gateway/bot")
+
+        if self.loop is None:
+            self.loop = asyncio.get_running_loop()
+
+        async def runner() -> None:
+            data = await self.rest.request("GET", route)
+            self.gateway = await self.rest.connect(data["url"])
+
+            await self.gateway.start(self)
+
+        while not self.closed:
+            await runner()
+            await asyncio.wait_for(self.gateway.reconnect_future, None)
+
+    async def close(self) -> None:
+        """Closes the client.
+
+        This method closes the gateway connection as
+        well as the :class:`aiohttp.ClientSession` used by RESTClient.
+        """
+        _log.debug("CLOSING CLIENT")
+        self.closed = True
+
+        session: aiohttp.ClientSession = self.rest.session
+        await session.close()
+        await self.gateway.close()
 
     def subscribe(
         self,
         event: Event,
-        func: Callable[..., Any],
+        func: Callback,
         *,
         once: bool = False,
         collect: None | int = None,
-        check: Callable[..., bool] = lambda *_: True,
+        check: Check = lambda *_: True,
     ) -> None:
         """Used to subscribe a callback to an event.
 
@@ -130,8 +164,8 @@ class GatewayClient:
         return _log.debug(message.format("Listener", name, fmt))
 
     def collect(
-        self, event: Event, *, amount: int, check: Callable[..., bool] = lambda *_: True
-    ) -> Callable[..., Any]:
+        self, event: Event, *, amount: int, check: Check = lambda *_: True
+    ) -> Callback:
         """Registers a collector to an event.
 
         Arguments of the callback will be passed as lists when
@@ -150,15 +184,13 @@ class GatewayClient:
             an event.
         """
 
-        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
+        def inner(func: Callback) -> Callback:
             self.subscribe(event, func, collect=amount, check=check)
             return func
 
         return inner
 
-    def on(
-        self, event: Event, check: Callable[..., bool] = lambda *_: True
-    ) -> Callable[..., Any]:
+    def on(self, event: Event, check: Check = lambda *_: True) -> Callback:
         """Registers a callback to an event.
 
         Parameters
@@ -170,15 +202,13 @@ class GatewayClient:
             The check the event has to pass in order to be dispatched.
         """
 
-        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
+        def inner(func: Callback) -> Callback:
             self.subscribe(event, func, check=check)
             return func
 
         return inner
 
-    def once(
-        self, event: Event, check: Callable[..., bool] = lambda *_: True
-    ) -> Callable[..., Any]:
+    def once(self, event: Event, check: Check = lambda *_: True) -> Callback:
         """Registers a onetime callback to an event.
 
         Parameters
@@ -190,22 +220,8 @@ class GatewayClient:
             The check the event has to pass in order to be dispatched.
         """
 
-        def inner(func: Callable[..., Any]) -> Callable[..., Any]:
+        def inner(func: Callback) -> Callback:
             self.subscribe(event, func, once=True, check=check)
             return func
 
         return inner
-
-    async def start(self) -> None:
-        """Starts the connection.
-
-        This method creates the internal gateway handler and
-        starts the pacemaker to keep the connect "alive". This also
-        waits for reconnect dispatches to restart the gateway.
-        """
-        while True:
-            data = await self.rest.request("GET", Route("gateway/bot"))
-            self.gateway = await self.rest.connect(data["url"])
-
-            await self.gateway.start(self)
-            await asyncio.wait_for(self.gateway.reconnect_future, timeout=None)
