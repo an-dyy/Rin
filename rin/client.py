@@ -85,6 +85,9 @@ class GatewayClient:
             self.loop = asyncio.get_running_loop()
 
         async def runner() -> None:
+            if self.closed is True:
+                return None
+
             data = await self.rest.request("GET", route)
             self.gateway = await self.rest.connect(data["url"])
 
