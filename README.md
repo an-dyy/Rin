@@ -29,10 +29,9 @@ This is the successor to the Lefi project.
     pre-commit install
     ```
 
-## Join the discord!
-- [Discord](https://discord.gg/ZcAqDBaxRf)
-
 ## Notable contributors
 
 - [blanketsucks](https://github.com/blanketsucks) - collaborator
 - [an-dyy](https://github.com/an-dyy) - creator and maintainer
+
+[![Discord!](https://img.shields.io/badge/Discord-Rin-blue)](https://discord.gg/ZcAqDBaxRf)
