@@ -57,7 +57,7 @@ class GatewayClient:
 
     token: str = attr.field()
     intents: int = attr.field(kw_only=True, default=1)
-    loop: None | asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)
+    loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)  # type: ignore
 
     rest: RESTClient = attr.field(init=False)
     gateway: Gateway = attr.field(init=False)
@@ -67,13 +67,6 @@ class GatewayClient:
     user: None | User = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
-        if self.loop is None:
-            try:
-                self.loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.loop)
-
         self.rest = RESTClient(self.token, self)
         self.dispatch = Dispatch(self)
 
@@ -85,7 +78,13 @@ class GatewayClient:
         route = Route("gateway/bot")
 
         if self.loop is None:
-            self.loop = asyncio.get_running_loop()
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
+            finally:
+                self.dispatch.loop = self.loop
 
         async def runner() -> None:
             if self.closed is True:

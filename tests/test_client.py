@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from asyncio import gather, get_running_loop
-
 import unittest
+from asyncio import gather, get_running_loop
 from unittest.mock import AsyncMock
 
 import rin
@@ -14,6 +13,7 @@ class TestClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_on(self) -> None:
         client = rin.GatewayClient("DISCORD_TOKEN")
+        client.loop = get_running_loop()
 
         listeners = client.dispatch.listeners[rin.Event.READY]
         self.assertEqual(len(listeners), 0)
@@ -28,6 +28,7 @@ class TestClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_once(self) -> None:
         client = rin.GatewayClient("DISCORD_TOKEN")
+        client.loop = get_running_loop()
 
         listeners = client.dispatch.once[rin.Event.READY]
         self.assertEqual(len(listeners), 0)
@@ -43,6 +44,7 @@ class TestClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_collector(self) -> None:
         client = rin.GatewayClient("DISCORD_TOKEN")
+        client.loop = get_running_loop()
 
         mock = AsyncMock(__name__="<MOCK>")
         client.subscribe(rin.Event.READY, mock, collect=5)

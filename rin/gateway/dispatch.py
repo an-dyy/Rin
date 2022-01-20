@@ -54,8 +54,6 @@ class Dispatch:
     once: dict[Event, list[Listener]] = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
-        assert self.client.loop is not None
-
         self.loop = self.client.loop
         self.parser = Parser(self.client, self)
 
@@ -66,22 +64,21 @@ class Dispatch:
     def __call__(self, event: Event, *payload: Any) -> list[asyncio.Task[Any]]:
         _log.debug(f"DISPATCHER: DISPATCHING {event}")
         tasks: list[asyncio.Task[Any]] = []
-        loop = self.loop
+        self.loop = self.client.loop
 
-        assert loop is not None
         for once in self.once[event][:]:
             if once.check(*payload):
-                tasks.append(loop.create_task(once.callback(*payload)))
+                tasks.append(self.loop.create_task(once.callback(*payload)))
                 self.once[event].pop()
 
         for listener in self.listeners[event]:
             if listener.check(*payload):
-                tasks.append(loop.create_task(listener.callback(*payload)))
+                tasks.append(self.loop.create_task(listener.callback(*payload)))
 
         if collector := self.collectors.get(event):
             if not collector.check(*payload):
                 return tasks
 
-            tasks.append(loop.create_task(collector.dispatch(loop, *payload)))
+            tasks.append(self.loop.create_task(collector.dispatch(self.loop, *payload)))
 
         return tasks
