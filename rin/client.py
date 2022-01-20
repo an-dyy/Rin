@@ -68,7 +68,11 @@ class GatewayClient:
 
     def __attrs_post_init__(self) -> None:
         if self.loop is None:
-            self.loop = asyncio.get_running_loop()
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
 
         self.rest = RESTClient(self.token, self)
         self.dispatch = Dispatch(self)
