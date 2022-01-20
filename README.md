@@ -34,5 +34,4 @@ This is the successor to the Lefi project.
 - [blanketsucks](https://github.com/blanketsucks) - collaborator
 - [an-dyy](https://github.com/an-dyy) - creator and maintainer
 
-## Join the discord!
-- [![Discord!](https://img.shields.io/badge/Discord-Rin-blue)](https://discord.gg/ZcAqDBaxRf)
+[![Discord!](https://img.shields.io/badge/Discord-Rin-blue)](https://discord.gg/ZcAqDBaxRf)
