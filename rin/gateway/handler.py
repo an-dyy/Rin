@@ -103,7 +103,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         assert client.loop is not None
 
         self.client = client
-        self.intents = client.intents
+        self.intents = client.intents.value
 
         self.reconnect_future = client.loop.create_future()
 

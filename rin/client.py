@@ -8,7 +8,7 @@ import aiohttp
 import attr
 
 from .gateway import Collector, Dispatch, Event, Gateway, Listener
-from .models import User
+from .models import User, Intents
 from .rest import RESTClient, Route
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class GatewayClient:
     """
 
     token: str = attr.field()
-    intents: int = attr.field(kw_only=True, default=1)
+    intents: Intents = attr.field(kw_only=True, default=Intents.default())
     loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)  # type: ignore
 
     rest: RESTClient = attr.field(init=False)
