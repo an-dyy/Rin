@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
+from multidict import istr
 
 import aiohttp
 import attr
@@ -172,6 +173,10 @@ class Ratelimiter:
 class RatelimitedClientResponse(aiohttp.ClientResponse):
     """A subclass of :class:`aiohttp.ClientResponse`"""
 
+    REMAINING: ClassVar[istr] = istr("X-Ratelimit-Remaining")
+    RESET_AT: ClassVar[istr] = istr("X-Ratelimit-Reset-After")
+    TOTAL: ClassVar[istr] = istr("X-Ratelimit-Limit")
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -184,17 +189,17 @@ class RatelimitedClientResponse(aiohttp.ClientResponse):
     @property
     def uses(self) -> int:
         """Uses left in the bucket before it's depleted."""
-        return int(self.headers.get("X-Ratelimit-Remaining", 1))
+        return int(self.headers.get(RatelimitedClientResponse.REMAINING, 1))
 
     @property
     def limit(self) -> int:
         """The total amount of requests of the bucket."""
-        return int(self.headers.get("X-Ratelimit-Limit", 1))
+        return int(self.headers.get(RatelimitedClientResponse.TOTAL, 1))
 
     @property
     def reset_after(self) -> float:
         """How long until the ratelimit of a bucket resets."""
-        return float(self.headers.get("X-Ratelimit-Reset-After", 0))
+        return float(self.headers.get(RatelimitedClientResponse.RESET_AT, 0))
 
     async def retry_after(self) -> None | float:
         """The time to wait before making another request."""
