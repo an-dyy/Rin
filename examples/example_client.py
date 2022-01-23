@@ -11,7 +11,7 @@ async def main() -> None:
     token: str = os.getenv("DISCORD_TOKEN")  # type: ignore
     client = rin.GatewayClient(token, intents=rin.Intents.default())
 
-    @client.once(rin.Event.READY)
+    @client.once(rin.Events.READY)
     async def on_ready(user: rin.User) -> None:
         print(f"Logged in as: {user.id}")
 

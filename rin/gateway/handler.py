@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 import aiohttp
 
-from .event import Event
+from .event import Events
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
@@ -63,13 +63,13 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def send_dispatch(self, data: dict[Any, Any]) -> None:
         dispatch = self.client.dispatch
-        event = Event(data["t"])
+        event = getattr(Events, data["t"])
 
         assert self.client.loop is not None
         if event == "READY":
             self.session_id = data["d"]["session_id"]
 
-        parser = getattr(dispatch.parser, f"parse_{event.lower()}", None)
+        parser = getattr(dispatch.parser, f"parse_{event.name.lower()}", None)
 
         if parser is not None:
             self._loop.create_task(parser(data["d"]))
@@ -77,11 +77,11 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         elif parser is None:
             self._loop.create_task(dispatch.parser.no_parse(event, data["d"]))
 
-        for wildcard in dispatch.listeners[Event.WILDCARD]:
+        for wildcard in Events.WILDCARD.listeners:
             if wildcard.check(event, data["d"]):
                 self.client.loop.create_task(wildcard(event, data["d"]))
 
-        if collector := dispatch.collectors.get(event):
+        for collector in Events.WILDCARD.collectors:
             if collector.check(event, data["d"]):
                 self.client.loop.create_task(
                     collector.dispatch(self.client.loop, event, data["d"])

@@ -108,7 +108,7 @@ class GatewayClient:
         await self.gateway.close()
 
     def subscribe(
-        self, event: Event, func: Callback, **kwargs: Any
+        self, event: Event[Any], func: Callback, **kwargs: Any
     ) -> Listener | Collector:
         """Subscribes a callback to an :class:`.Event`
 
@@ -144,20 +144,20 @@ class GatewayClient:
 
         if amount := kwargs.get("amount"):
             collector = Collector(func, check, asyncio.Queue[Any](maxsize=amount))
-            self.dispatch.collectors[event] = collector
+            event.collectors.append(collector)
 
             return collector
 
         listener = Listener(func, check)
         if kwargs.get("once", False) is not False:
-            self.dispatch.once[event].append(listener)
+            event.temp.append(listener)
             return listener
 
-        self.dispatch.listeners[event].append(listener)
+        event.listeners.append(listener)
         return listener
 
     def collect(
-        self, event: Event, *, amount: int, check: Check = lambda *_: True
+        self, event: Event[Any], *, amount: int, check: Check = lambda *_: True
     ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
@@ -186,7 +186,7 @@ class GatewayClient:
         return inner
 
     def on(
-        self, event: Event, check: Check = lambda *_: True
+        self, event: Event[Any], check: Check = lambda *_: True
     ) -> Callable[..., Listener]:
         """Registers a callback to an event.
 
@@ -208,7 +208,7 @@ class GatewayClient:
         return inner
 
     def once(
-        self, event: Event, check: Check = lambda *_: True
+        self, event: Event[Any], check: Check = lambda *_: True
     ) -> Callable[..., Listener]:
         """Registers a onetime callback to an event.
 

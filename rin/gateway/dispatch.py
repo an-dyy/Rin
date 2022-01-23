@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
 import attr
@@ -55,33 +54,30 @@ class Dispatch:
     parser: Parser = attr.field(init=False)
     loop: asyncio.AbstractEventLoop = attr.field(init=False)
 
-    listeners: dict[Event, list[Listener]] = attr.field(init=False)
-    collectors: dict[Event, Collector] = attr.field(init=False)
-    once: dict[Event, list[Listener]] = attr.field(init=False)
-
     def __attrs_post_init__(self) -> None:
         self.loop = self.client.loop
         self.parser = Parser(self.client, self)
 
-        self.listeners: dict[Event, list[Listener]] = defaultdict(list)
-        self.once: dict[Event, list[Listener]] = defaultdict(list)
-        self.collectors: dict[Event, Collector] = {}
-
-    def __call__(self, event: Event, *payload: Any) -> list[asyncio.Task[Any]]:
-        _log.debug(f"DISPATCHER: DISPATCHING {event}")
+    def __call__(self, event: Event[Any], *payload: Any) -> list[asyncio.Task[Any]]:
+        _log.debug(f"DISPATCHER: DISPATCHING {event.name}")
         tasks: list[asyncio.Task[Any]] = []
         self.loop = self.client.loop
 
-        for once in self.once[event][:]:
+        for once in event.temp[:]:
             if once.check(*payload):
                 tasks.append(self.loop.create_task(once(*payload)))
-                self.once[event].pop()
+                event.temp.pop()
 
-        for listener in self.listeners[event]:
+        for future, check in event.futures[:]:
+            if check(*payload):
+                future.set_result(*payload)
+                event.futures.pop()
+
+        for listener in event.listeners:
             if listener.check(*payload):
                 tasks.append(self.loop.create_task(listener(*payload)))
 
-        if collector := self.collectors.get(event):
+        for collector in event.collectors:
             if not collector.check(*payload):
                 return tasks
 
