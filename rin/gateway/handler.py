@@ -79,7 +79,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
         for wildcard in dispatch.listeners[Event.WILDCARD]:
             if wildcard.check(event, data["d"]):
-                self.client.loop.create_task(wildcard.callback(event, data["d"]))
+                self.client.loop.create_task(wildcard(event, data["d"]))
 
         if collector := dispatch.collectors.get(event):
             if collector.check(event, data["d"]):

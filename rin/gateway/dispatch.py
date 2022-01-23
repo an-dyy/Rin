@@ -21,11 +21,17 @@ class Listener(NamedTuple):
     callback: Callable[..., Awaitable[Any]]
     check: Callable[..., bool]
 
+    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.callback(*args, **kwargs)
+
 
 class Collector(NamedTuple):
     callback: Callable[..., Awaitable[Any]]
     check: Callable[..., bool]
     queue: asyncio.Queue[Any]
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.callback(*args, **kwargs)
 
     async def dispatch(
         self, loop: asyncio.AbstractEventLoop, *payload: Any
@@ -37,7 +43,7 @@ class Collector(NamedTuple):
 
         if self.queue.full():
             items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
-            task = loop.create_task(self.callback(*list(zip(*items))))
+            task = loop.create_task(self(*list(zip(*items))))
 
         return task
 
@@ -68,12 +74,12 @@ class Dispatch:
 
         for once in self.once[event][:]:
             if once.check(*payload):
-                tasks.append(self.loop.create_task(once.callback(*payload)))
+                tasks.append(self.loop.create_task(once(*payload)))
                 self.once[event].pop()
 
         for listener in self.listeners[event]:
             if listener.check(*payload):
-                tasks.append(self.loop.create_task(listener.callback(*payload)))
+                tasks.append(self.loop.create_task(listener(*payload)))
 
         if collector := self.collectors.get(event):
             if not collector.check(*payload):

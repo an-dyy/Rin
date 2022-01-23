@@ -113,64 +113,57 @@ class GatewayClient:
         await self.gateway.close()
 
     def subscribe(
-        self,
-        event: Event,
-        func: Callback,
-        *,
-        once: bool = False,
-        collect: None | int = None,
-        check: Check = lambda *_: True,
-    ) -> None:
-        """Used to subscribe a callback to an event.
+        self, event: Event, func: Callback, **kwargs: Any
+    ) -> Listener | Collector:
+        """Subscribes a callback to an :class:`.Event`
 
         Parameters
         ----------
-        name: :class:`.Event`
-            The the event to register to.
+        event: :class:`.Event`
+            The event to subscribe the callback to.
 
         func: Callable[..., Any]
-            The callback to register to the event.
+            The callback being subscribed.
 
         once: :class:`bool`
-            If the callback should be ran once per lifetime.
+            If this should be considered a one-time subscription.
 
-        collect: None | :class:`int`
-            How many times to collect the event before dispatching
-            all at once. Arguments for the callback will be passed as lists.
+        amount: :class:`int`
+            How many times to collect the event before dispatching. This determines
+            if the listener should be considered a :class:`.Collector`
 
-        check: Callable[..., :class:`bool`]
-            The check the event has to pass in order to be dispatched.
+        check: Callable[..., bool]
+            A check the event has to pass in order to dispatch.
 
         Raises
         ------
         :exc:`TypeError`
-            Raised when the callback is not a Coroutine.
+            Raised when the callback is not a coroutine function.
+
+        Returns
+        -------
+        :class:`.Listener` | :class:`.Collector`
+            The created listener or collector.
         """
-        if not asyncio.iscoroutinefunction(func):
-            raise TypeError("Listener callback must be Coroutine.") from None
+        check: Check = kwargs.get("check") or (lambda *_: True)
 
-        data = Listener(func, check)
-        fmt = f"(Event={event}, amount={collect})"
-        message = "DISPATCHER: Append {0} {1} {2}"
-        name = func.__name__
+        if amount := kwargs.get("amount"):
+            collector = Collector(func, check, asyncio.Queue[Any](maxsize=amount))
+            self.dispatch.collectors[event] = collector
 
-        if collect is not None:
-            self.dispatch.collectors[event] = Collector(
-                func, check, asyncio.Queue[Any](maxsize=collect)
-            )
+            return collector
 
-            return _log.debug(message.format("Collector", name, fmt))
+        listener = Listener(func, check)
+        if kwargs.get("once", False) is not False:
+            self.dispatch.once[event].append(listener)
+            return listener
 
-        elif once is not False:
-            self.dispatch.once[event].append(data)
-            return _log.debug(message.format("one-time", name, fmt))
-
-        self.dispatch.listeners[event].append(data)
-        return _log.debug(message.format("Listener", name, fmt))
+        self.dispatch.listeners[event].append(listener)
+        return listener
 
     def collect(
         self, event: Event, *, amount: int, check: Check = lambda *_: True
-    ) -> Callback:
+    ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
         Arguments of the callback will be passed as lists when
@@ -189,13 +182,17 @@ class GatewayClient:
             an event.
         """
 
-        def inner(func: Callback) -> Callback:
-            self.subscribe(event, func, collect=amount, check=check)
-            return func
+        def inner(func: Callback) -> Collector:
+            ret = self.subscribe(event, func, amount=amount, check=check)
+            assert isinstance(ret, Collector)
+
+            return ret
 
         return inner
 
-    def on(self, event: Event, check: Check = lambda *_: True) -> Callback:
+    def on(
+        self, event: Event, check: Check = lambda *_: True
+    ) -> Callable[..., Listener]:
         """Registers a callback to an event.
 
         Parameters
@@ -207,13 +204,17 @@ class GatewayClient:
             The check the event has to pass in order to be dispatched.
         """
 
-        def inner(func: Callback) -> Callback:
-            self.subscribe(event, func, check=check)
-            return func
+        def inner(func: Callback) -> Listener:
+            ret = self.subscribe(event, func, check=check)
+            assert isinstance(ret, Listener)
+
+            return ret
 
         return inner
 
-    def once(self, event: Event, check: Check = lambda *_: True) -> Callback:
+    def once(
+        self, event: Event, check: Check = lambda *_: True
+    ) -> Callable[..., Listener]:
         """Registers a onetime callback to an event.
 
         Parameters
@@ -225,8 +226,10 @@ class GatewayClient:
             The check the event has to pass in order to be dispatched.
         """
 
-        def inner(func: Callback) -> Callback:
-            self.subscribe(event, func, once=True, check=check)
-            return func
+        def inner(func: Callback) -> Listener:
+            ret = self.subscribe(event, func, once=True, check=check)
+            assert isinstance(ret, Listener)
+
+            return ret
 
         return inner
