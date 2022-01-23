@@ -78,13 +78,8 @@ class GatewayClient:
         route = Route("gateway/bot")
 
         if self.loop is None:
-            try:
-                self.loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.loop)
-            finally:
-                self.dispatch.loop = self.loop
+            self.loop = asyncio.get_running_loop()
+            self.dispatch.loop = self.loop
 
         async def runner() -> None:
             if self.closed is True:
