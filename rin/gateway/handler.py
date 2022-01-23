@@ -81,6 +81,11 @@ class Gateway(aiohttp.ClientWebSocketResponse):
             if wildcard.check(event, data["d"]):
                 self.client.loop.create_task(wildcard(event, data["d"]))
 
+        for future, check in Events.WILDCARD.futures[:]:
+            if check(event, data["d"]):
+                future.set_result((event, data["d"]))
+                Events.WILDCARD.futures.remove((future, check))
+
         for collector in Events.WILDCARD.collectors:
             if collector.check(event, data["d"]):
                 self.client.loop.create_task(

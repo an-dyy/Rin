@@ -97,22 +97,28 @@ class Event(Generic[T]):
         return self.name
 
     @overload
-    async def wait(self: Event[Literal["READY"]]) -> User:
+    async def wait(
+        self: Event[Literal["*"]],
+        timeout: None | float = None,
+        check: Check = lambda *_: True,
+    ) -> tuple[Event[Any], dict[Any, Any]]:
         ...
 
     @overload
-    async def wait(self: Event[Literal["MESSAGE_CREATE"]]) -> dict[Any, Any]:
+    async def wait(
+        self: Event[Literal["READY"]],
+        timeout: None | float = None,
+        check: Check = lambda *_: True,
+    ) -> User:
         ...
 
     async def wait(
         self, timeout: None | float = None, check: Check = lambda *_: True
     ) -> Any:
-        loop = asyncio.get_running_loop()
-
-        future = asyncio.Future[Any](loop=loop)
+        future = asyncio.get_running_loop().create_future()
         self.futures.append((future, check))
 
-        await asyncio.wait_for(future, timeout=timeout)
+        return await asyncio.wait_for(future, timeout=timeout)
 
 
 class Events:
