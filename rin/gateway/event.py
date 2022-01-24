@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from typing import (
     TYPE_CHECKING,
     TypeVar,
@@ -87,6 +89,7 @@ T = TypeVar(
 class Listener(NamedTuple):
     callback: Callable[..., Awaitable[Any]]
     check: Callable[..., bool]
+    in_class: bool = False
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
@@ -96,12 +99,13 @@ class Collector(NamedTuple):
     callback: Callable[..., Awaitable[Any]]
     check: Callable[..., bool]
     queue: asyncio.Queue[Any]
+    in_class: bool = False
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
     async def dispatch(
-        self, loop: asyncio.AbstractEventLoop, *payload: Any
+        self, loop: asyncio.AbstractEventLoop, *payload: Any, **kwargs: Any
     ) -> None | asyncio.Task[Any]:
         task: None | asyncio.Task[Any] = None
 
@@ -110,7 +114,12 @@ class Collector(NamedTuple):
 
         if self.queue.full():
             items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
-            task = loop.create_task(self(*list(zip(*items))))
+
+            if kwargs.get("client") is not None:
+                task = loop.create_task(self(kwargs["client"], *list(zip(*items))))
+
+            elif kwargs.get("client") is None:
+                task = loop.create_task(self(*list(zip(*items))))
 
         return task
 
@@ -166,14 +175,17 @@ class Event(Generic[T]):
             The created listener or collector.
         """
         check: Check = kwargs.get("check") or (lambda *_: True)
+        in_class = "self" in inspect.signature(func).parameters
 
         if amount := kwargs.get("amount"):
-            collector = Collector(func, check, asyncio.Queue[Any](maxsize=amount))
+            collector = Collector(
+                func, check, asyncio.Queue[Any](maxsize=amount), in_class=in_class
+            )
             self.collectors.append(collector)
 
             return collector
 
-        listener = Listener(func, check)
+        listener = Listener(func, check, in_class=in_class)
         if kwargs.get("once", False) is not False:
             self.temp.append(listener)
             return listener

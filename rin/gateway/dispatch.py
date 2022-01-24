@@ -34,7 +34,12 @@ class Dispatch:
 
         for once in event.temp[:]:
             if once.check(*payload):
-                tasks.append(self.loop.create_task(once(*payload)))
+                if once.in_class is True:
+                    tasks.append(self.loop.create_task(once(self.client, *payload)))
+
+                elif once.in_class is False:
+                    tasks.append(self.loop.create_task(once(*payload)))
+
                 event.temp.pop()
 
         for future, check in event.futures[:]:
@@ -44,12 +49,21 @@ class Dispatch:
 
         for listener in event.listeners:
             if listener.check(*payload):
-                tasks.append(self.loop.create_task(listener(*payload)))
+                if listener.in_class is True:
+                    tasks.append(self.loop.create_task(listener(self.client, *payload)))
+
+                elif listener.in_class is False:
+                    tasks.append(self.loop.create_task(listener(*payload)))
 
         for collector in event.collectors:
             if not collector.check(*payload):
                 return tasks
 
-            tasks.append(self.loop.create_task(collector.dispatch(self.loop, *payload)))
+            client = self.client if collector.in_class else None
+            tasks.append(
+                self.loop.create_task(
+                    collector.dispatch(self.loop, *payload, client=client)
+                )
+            )
 
         return tasks

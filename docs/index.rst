@@ -18,6 +18,11 @@ Features
 * `Object oriented` - Allows for easy usage of the wrapper.
 * `Ratelimit handling` - Our ratelimiter allows for SAFE **concurrent** requests.
 
+Manuals
+~~~~~~~
+.. toctree::
+    Getting started <Manuals/Getting-started>
+
 API-Reference
 ~~~~~~~~~~~~~
 .. toctree::

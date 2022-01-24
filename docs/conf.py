@@ -37,10 +37,6 @@ html_static_path = ["_static"]
 html_theme = "furo"
 
 html_theme_options = {
-    "light_css_variables": {
-        "color-api-name": "#f0f0f0",
-        "color-api-pre-name": "#f0f0f0",
-    },
     "dark_css_variables": {
         "color-api-name": "#f0f0f0",
         "color-api-pre-name": "#f0f0f0",
