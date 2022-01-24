@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
+from typing import TYPE_CHECKING, Any
 
 import attr
 
@@ -12,39 +12,8 @@ from .parser import Parser
 if TYPE_CHECKING:
     from ..client import GatewayClient
 
-__all__ = ("Dispatch", "Listener", "Collector")
+__all__ = ("Dispatch",)
 _log = logging.getLogger(__name__)
-
-
-class Listener(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-
-    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        return await self.callback(*args, **kwargs)
-
-
-class Collector(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-    queue: asyncio.Queue[Any]
-
-    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        return await self.callback(*args, **kwargs)
-
-    async def dispatch(
-        self, loop: asyncio.AbstractEventLoop, *payload: Any
-    ) -> None | asyncio.Task[Any]:
-        task: None | asyncio.Task[Any] = None
-
-        await self.queue.put(payload)
-        self.queue.task_done()
-
-        if self.queue.full():
-            items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
-            task = loop.create_task(self(*list(zip(*items))))
-
-        return task
 
 
 @attr.s(slots=True)

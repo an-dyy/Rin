@@ -107,55 +107,6 @@ class GatewayClient:
         await session.close()
         await self.gateway.close()
 
-    def subscribe(
-        self, event: Event[Any], func: Callback, **kwargs: Any
-    ) -> Listener | Collector:
-        """Subscribes a callback to an :class:`.Event`
-
-        Parameters
-        ----------
-        event: :class:`.Event`
-            The event to subscribe the callback to.
-
-        func: Callable[..., Any]
-            The callback being subscribed.
-
-        once: :class:`bool`
-            If this should be considered a one-time subscription.
-
-        amount: :class:`int`
-            How many times to collect the event before dispatching. This determines
-            if the listener should be considered a :class:`.Collector`
-
-        check: Callable[..., bool]
-            A check the event has to pass in order to dispatch.
-
-        Raises
-        ------
-        :exc:`TypeError`
-            Raised when the callback is not a coroutine function.
-
-        Returns
-        -------
-        :class:`.Listener` | :class:`.Collector`
-            The created listener or collector.
-        """
-        check: Check = kwargs.get("check") or (lambda *_: True)
-
-        if amount := kwargs.get("amount"):
-            collector = Collector(func, check, asyncio.Queue[Any](maxsize=amount))
-            event.collectors.append(collector)
-
-            return collector
-
-        listener = Listener(func, check)
-        if kwargs.get("once", False) is not False:
-            event.temp.append(listener)
-            return listener
-
-        event.listeners.append(listener)
-        return listener
-
     def collect(
         self, event: Event[Any], *, amount: int, check: Check = lambda *_: True
     ) -> Callable[..., Collector]:
@@ -178,7 +129,7 @@ class GatewayClient:
         """
 
         def inner(func: Callback) -> Collector:
-            ret = self.subscribe(event, func, amount=amount, check=check)
+            ret = event.subscribe(func, amount=amount, check=check)
             assert isinstance(ret, Collector)
 
             return ret
@@ -200,7 +151,7 @@ class GatewayClient:
         """
 
         def inner(func: Callback) -> Listener:
-            ret = self.subscribe(event, func, check=check)
+            ret = event.subscribe(func, check=check)
             assert isinstance(ret, Listener)
 
             return ret
@@ -222,7 +173,7 @@ class GatewayClient:
         """
 
         def inner(func: Callback) -> Listener:
-            ret = self.subscribe(event, func, once=True, check=check)
+            ret = event.subscribe(func, once=True, check=check)
             assert isinstance(ret, Listener)
 
             return ret

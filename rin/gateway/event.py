@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Generic, Literal, Any, overload, Callable
+from typing import (
+    TYPE_CHECKING,
+    TypeVar,
+    Generic,
+    Literal,
+    Any,
+    overload,
+    Callable,
+    Awaitable,
+    NamedTuple,
+)
 
 import asyncio
 import attr
@@ -10,10 +20,10 @@ from ..models import User
 if TYPE_CHECKING:
     Timeout = None | float
     Check = Callable[..., bool]
+    Callback = Callable[..., Any]
 
-    from .dispatch import Collector, Listener
 
-__all__ = ("Event", "Events")
+__all__ = ("Event", "Events", "Collector", "Listener")
 T = TypeVar(
     "T",
     bound=Literal[
@@ -74,6 +84,37 @@ T = TypeVar(
 )
 
 
+class Listener(NamedTuple):
+    callback: Callable[..., Awaitable[Any]]
+    check: Callable[..., bool]
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.callback(*args, **kwargs)
+
+
+class Collector(NamedTuple):
+    callback: Callable[..., Awaitable[Any]]
+    check: Callable[..., bool]
+    queue: asyncio.Queue[Any]
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.callback(*args, **kwargs)
+
+    async def dispatch(
+        self, loop: asyncio.AbstractEventLoop, *payload: Any
+    ) -> None | asyncio.Task[Any]:
+        task: None | asyncio.Task[Any] = None
+
+        await self.queue.put(payload)
+        self.queue.task_done()
+
+        if self.queue.full():
+            items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
+            task = loop.create_task(self(*list(zip(*items))))
+
+        return task
+
+
 @attr.s(slots=True)
 class Event(Generic[T]):
     name: T = attr.field()
@@ -95,6 +136,110 @@ class Event(Generic[T]):
 
     def __str__(self) -> str:
         return self.name
+
+    def subscribe(self, func: Callback, **kwargs: Any) -> Listener | Collector:
+        """Subscribes a callback to an :class:`.Event`
+
+        Parameters
+        ----------
+        func: Callable[..., Any]
+            The callback being subscribed.
+
+        once: :class:`bool`
+            If this should be considered a one-time subscription.
+
+        amount: :class:`int`
+            How many times to collect the event before dispatching. This determines
+            if the listener should be considered a :class:`.Collector`
+
+        check: Callable[..., bool]
+            A check the event has to pass in order to dispatch.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            Raised when the callback is not a coroutine function.
+
+        Returns
+        -------
+        :class:`.Listener` | :class:`.Collector`
+            The created listener or collector.
+        """
+        check: Check = kwargs.get("check") or (lambda *_: True)
+
+        if amount := kwargs.get("amount"):
+            collector = Collector(func, check, asyncio.Queue[Any](maxsize=amount))
+            self.collectors.append(collector)
+
+            return collector
+
+        listener = Listener(func, check)
+        if kwargs.get("once", False) is not False:
+            self.temp.append(listener)
+            return listener
+
+        self.listeners.append(listener)
+        return listener
+
+    def collect(
+        self, *, amount: int, check: Check = lambda *_: True
+    ) -> Callable[..., Collector]:
+        """Registers a collector to an event.
+
+        Arguments of the callback will be passed as lists when
+        the event has been collected X amount of times.
+
+        Parameters
+        ----------
+        amount: :class:`int`
+            The amount to collect before dispatching.
+
+        check: Callable[..., bool]
+            The check needed to be valid in order to collect
+            an event.
+        """
+
+        def inner(func: Callback) -> Collector:
+            ret = self.subscribe(func, amount=amount, check=check)
+            assert isinstance(ret, Collector)
+
+            return ret
+
+        return inner
+
+    def on(self, check: Check = lambda *_: True) -> Callable[..., Listener]:
+        """Registers a callback to an event.
+
+        Parameters
+        ----------
+        check: Callable[..., :class:`bool`]
+            The check the event has to pass in order to be dispatched.
+        """
+
+        def inner(func: Callback) -> Listener:
+            ret = self.subscribe(func, check=check)
+            assert isinstance(ret, Listener)
+
+            return ret
+
+        return inner
+
+    def once(self, check: Check = lambda *_: True) -> Callable[..., Listener]:
+        """Registers a onetime callback to an event.
+
+        Parameters
+        ----------
+        check: Callable[..., :class:`bool`]
+            The check the event has to pass in order to be dispatched.
+        """
+
+        def inner(func: Callback) -> Listener:
+            ret = self.subscribe(func, once=True, check=check)
+            assert isinstance(ret, Listener)
+
+            return ret
+
+        return inner
 
     @overload
     async def wait(
