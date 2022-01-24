@@ -1,4 +1,4 @@
-__version__ = "0.1.0-alpha"
+__version__ = "0.1.1-alpha"
 __author__ = "Andy"
 
 from .client import *
