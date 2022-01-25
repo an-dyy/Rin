@@ -41,6 +41,16 @@ GatewayClient
     .. autodecorator:: rin.GatewayClient.on
     .. autodecorator:: rin.GatewayClient.once
 
+RESTClient
+~~~~~~~~~~
+.. autoclass:: RESTClient
+    :members:
+
+Route
+~~~~~
+.. autoclass:: Route
+    :members:
+
 Models
 ------
 Models in the wrapper.

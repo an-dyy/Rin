@@ -97,7 +97,11 @@ class RESTClient:
 
     This class implements requesting which works in tandem
     with the concurrent request ratelimit system. Allows for safe requesting
-    and bucket depletion sanity.
+    and bucket depletion handling.
+
+    .. note::
+
+        The `session` attribute is only set after at least 1 request.
 
     Parameters
     ----------
