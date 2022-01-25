@@ -5,23 +5,35 @@ API-Reference
 The API-Reference of the wrapper. Contains all
 methods and classes usable.
 
+Meta
+----
+Misc information about the wrapper.
+
 Version
--------
+~~~~~~~
 .. data:: __version__
     The current version of the wrapper.
 
-Cacheable
----------
-.. autoclass:: Cacheable
-    :members:
+Caching
+-------
+Things regarding caching and caches in the wrapper.
 
 Cache
------
+~~~~~
 .. autoclass:: Cache
     :members:
 
-GatewayClient
+Cacheable
+~~~~~~~~~
+.. autoclass:: Cacheable
+    :members:
+
+API Interface
 -------------
+Things in regard to handling and helping use of the API.
+
+GatewayClient
+~~~~~~~~~~~~~
 .. autoclass:: GatewayClient
     :exclude-members: __init__, on, once
     :members:
@@ -29,8 +41,17 @@ GatewayClient
     .. autodecorator:: rin.GatewayClient.on
     .. autodecorator:: rin.GatewayClient.once
 
+Models
+------
+Models in the wrapper.
+
+Base
+~~~~
+.. autoclass:: Base
+    :members:
+
 User
-----
+~~~~
 .. autoclass:: User
     :show-inheritance:
     :members:

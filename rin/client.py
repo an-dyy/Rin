@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, TypeVar, Any, Callable
 import signal
 
 import aiohttp
@@ -16,6 +16,8 @@ from .rest import RESTClient, Route
 if TYPE_CHECKING:
     Callback = Callable[..., Any]
     Check = Callable[..., bool]
+
+    T = TypeVar("T")
 
 __all__ = ("GatewayClient",)
 _log = logging.getLogger(__name__)
@@ -113,6 +115,29 @@ class GatewayClient:
 
         await session.close()
         await self.gateway.close(reason=reason)
+
+    def unserialize(self, data: dict[Any, Any], *, cls: type[T]) -> T:
+        """Un-serializes a serialized object. Used for persistent objects.
+
+        .. note::
+
+            Objects could be inaccurate or outdated. It's suggested
+            that you verify the object to be correct.
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data of the object. This is retrieved via :meth:`.Base.serialize`.
+
+        cls: :class:`type`
+            The class to create via the data given.
+
+        returns
+        -------
+        :class:`object`
+            The object created with the data.
+        """
+        return cls(self, data)
 
     def collect(
         self, event: Event[Any], *, amount: int, check: Check = lambda *_: True

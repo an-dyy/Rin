@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import attr
 
 from .cacheable import Cacheable
-
-if TYPE_CHECKING:
-    from rin.types import UserData
-
-    from ..client import GatewayClient
+from .base import Base
 
 __all__ = ("User",)
 
 
 @attr.s(slots=True)
-class User(Cacheable, max=1000):
+class User(Base, Cacheable, max=1000):
     """Represents a User.
 
     .. note::
@@ -57,41 +51,21 @@ class User(Cacheable, max=1000):
         The premium type of the user.
     """
 
-    _client: GatewayClient = attr.field(repr=False)
-    _data: UserData = attr.field(repr=False)
+    id: int = Base.field(key="id", cls=int)
 
-    id: int = attr.field(init=False)
-    username: str = attr.field(init=False)
-    discriminator: str = attr.field(init=False)
+    username: str = Base.field(key="username")
+    discriminator: str = Base.field(key="discriminator")
 
-    avatar: None | str = attr.field(init=False)
-    banner: None | str = attr.field(init=False)
-    color: int = attr.field(init=False)
+    avatar: None | str = Base.field(key="avatar")
+    banner: None | str = Base.field(key="banner")
+    color: None | int = Base.field(key="color", cls=int)
 
-    locale: None | str = attr.field(init=False)
-    email: None | str = attr.field(init=False)
+    locale: None | str = Base.field(key="locale")
+    email: None | str = Base.field(key="locale")
 
-    flags: int = attr.field(init=False)
-    public_flags: int = attr.field(init=False)
-    premium: int = attr.field(init=False)
-
-    def __attrs_post_init__(self) -> None:
-        self.id = int(self._data["id"])
-        self.username = self._data["username"]
-        self.discriminator = self._data["discriminator"]
-
-        self.avatar = self._data.get("avatar")
-        self.banner = self._data.get("banner")
-        self.color = self._data.get("accent_color", 0)
-
-        self.locale = self._data.get("locale")
-        self.email = self._data.get("email")
-
-        self.flags = self._data.get("flags", 0)
-        self.public_flags = self._data.get("public_flags", 0)
-        self.premium = self._data.get("premium_type", 0)
-
-        User.cache.set(self.id, self)
+    flags: int = Base.field(key="flags", default=0, cls=int)
+    public_flags: int = Base.field(key="public_flags", default=0, cls=int)
+    premium: int = Base.field(key="premium_type", default=0, cls=int)
 
     def __str__(self) -> str:
         return f"{self.username}#{self.discriminator}"
@@ -104,19 +78,19 @@ class User(Cacheable, max=1000):
     @property
     def bot(self) -> bool:
         """If the user is a bot."""
-        return self._data.get("bot", False)
+        return self.data.get("bot", False)
 
     @property
     def system(self) -> bool:
         """If the user is a system user."""
-        return self._data.get("system", False)
+        return self.data.get("system", False)
 
     @property
     def mfa_enabled(self) -> bool:
         """If the user has 2fa enabled."""
-        return self._data.get("mfa_enabled", False)
+        return self.data.get("mfa_enabled", False)
 
     @property
     def verified(self) -> bool:
         """If the user is verified or not."""
-        return self._data.get("verified") or False
+        return self.data.get("verified") or False
