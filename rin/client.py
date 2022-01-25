@@ -108,6 +108,11 @@ class GatewayClient:
 
         This method closes the gateway connection as
         well as the :class:`aiohttp.ClientSession` used by RESTClient.
+
+        Parameters
+        ----------
+        reason: :class:`str`
+            The reason to close the client with.
         """
         _log.debug("CLOSING CLIENT")
         session: aiohttp.ClientSession = self.rest.session
@@ -149,7 +154,7 @@ class GatewayClient:
 
         Parameters
         ----------
-        name: :class:`.Event`
+        event: :class:`.Event`
             The event to register to.
 
         amount: :class:`int`
@@ -158,6 +163,10 @@ class GatewayClient:
         check: Callable[..., bool]
             The check needed to be valid in order to collect
             an event.
+
+        Returns
+        -------
+        Callable[..., :class:`.Collector`]
         """
 
         def inner(func: Callback) -> Collector:
@@ -180,6 +189,10 @@ class GatewayClient:
 
         check: Callable[..., :class:`bool`]
             The check the event has to pass in order to be dispatched.
+
+        Returns
+        -------
+        Callable[..., :class:`.Listener`]
         """
 
         def inner(func: Callback) -> Listener:
@@ -202,6 +215,10 @@ class GatewayClient:
 
         check: Callable[..., :class:`bool`]
             The check the event has to pass in order to be dispatched.
+
+        Returns
+        -------
+        Callable[..., :class:`.Listener`]
         """
 
         def inner(func: Callback) -> Listener:
