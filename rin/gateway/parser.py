@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import attr
 
 from ..models import User
-from .event import Events, Event
+from .event import Event, Events
 
 if TYPE_CHECKING:
     from ..client import GatewayClient

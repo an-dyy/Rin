@@ -3,12 +3,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Callable
+import signal
 
 import aiohttp
 import attr
 
+from .utils import ensure_loop
 from .gateway import Collector, Dispatch, Event, Gateway, Listener
-from .models import User, Intents
+from .models import Intents, User
 from .rest import RESTClient, Route
 
 if TYPE_CHECKING:
@@ -70,15 +72,15 @@ class GatewayClient:
         self.rest = RESTClient(self.token, self)
         self.dispatch = Dispatch(self)
 
-    async def start(self) -> None:
+    async def start(self, reconnect: bool = False) -> None:
         """Starts the connection.
 
         This method starts the connection to the gateway.
         """
         route = Route("gateway/bot")
 
-        if self.loop is None:
-            self.loop = asyncio.get_running_loop()
+        if reconnect is not True and self.loop is None:
+            self.loop = ensure_loop()
             self.dispatch.loop = self.loop
 
         async def runner() -> None:
@@ -87,25 +89,30 @@ class GatewayClient:
 
             data = await self.rest.request("GET", route)
             self.gateway = await self.rest.connect(data["url"])
+            self.gateway._closed = False
 
             await self.gateway.start(self)
 
-        while not self.closed:
-            await runner()
-            await asyncio.wait_for(self.gateway.reconnect_future, None)
+        def handle() -> None:
+            self.loop.create_task(self.close("Received signal to terminate."))
 
-    async def close(self) -> None:
+        self.loop.add_signal_handler(signal.SIGTERM, handle)
+        self.loop.add_signal_handler(signal.SIGINT, handle)
+
+        await runner()
+
+    async def close(self, reason: str = "None") -> None:
         """Closes the client.
 
         This method closes the gateway connection as
         well as the :class:`aiohttp.ClientSession` used by RESTClient.
         """
         _log.debug("CLOSING CLIENT")
+        session: aiohttp.ClientSession = self.rest.session
         self.closed = True
 
-        session: aiohttp.ClientSession = self.rest.session
         await session.close()
-        await self.gateway.close()
+        await self.gateway.close(reason=reason)
 
     def collect(
         self, event: Event[Any], *, amount: int, check: Check = lambda *_: True

@@ -1,20 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
-
 from typing import (
     TYPE_CHECKING,
-    TypeVar,
+    Any,
+    Awaitable,
+    Callable,
     Generic,
     Literal,
-    Any,
-    overload,
-    Callable,
-    Awaitable,
     NamedTuple,
+    TypeVar,
+    overload,
 )
 
-import asyncio
 import attr
 
 from ..models import User

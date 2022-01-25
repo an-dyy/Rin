@@ -55,6 +55,8 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         self.session_id = ""
         self.sequence = 0
 
+        self.close_reason: None | str = None
+
         self.callbacks: dict[int, Callable[..., Awaitable[Any]]] = {
             int(OPCode.DISPATCH): self.send_dispatch,
             int(OPCode.RESUME): self.send_resume,
@@ -97,8 +99,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
     async def reconnect(self, _: dict[Any, Any]) -> None:
         _log.debug("GATEWAY SENT RECONNECT: CLOSING WEBSOCKET")
-
-        if not self._closed:
+        if not self.closed:
             await self.close()
 
         self.reconnect_future.set_result(None)
@@ -107,10 +108,10 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         _log.debug("CREATING GATEWAY FROM CLIENT.")
         assert client.loop is not None
 
+        self.reconnect_future = client.loop.create_future()
+
         self.client = client
         self.intents = client.intents.value
-
-        self.reconnect_future = client.loop.create_future()
 
         data = await self.receive_json()
         self.interval = data["d"]["heartbeat_interval"]
@@ -123,6 +124,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         if self.pacemaker is not None and not self.pacemaker.cancelled():
             self.pacemaker.cancel()
 
+        self.close_reason = kwargs.pop("reason", None)
         return await super().close(*args, **kwargs)
 
     async def send(self, payload: PayloadData) -> None:
@@ -152,7 +154,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
                 elif received["op"] == OPCode.HEARTBEAT_ACK:
                     _log.debug("GATEWAY ACK: HEARTBEAT")
 
-        _log.debug(f"WEBSOCKET CLOSED WITH CODE: {self.close_code}")
+        _log.debug(f"WEBSOCKET CLOSED WITH CODE: {self.close_code} REASON: {self.close_reason}")
 
     @property
     def identify(self) -> IdentifyData:

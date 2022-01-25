@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, ClassVar
-from multidict import istr
 
 import aiohttp
 import attr
+from multidict import istr
 
 from .errors import HTTPException
 
