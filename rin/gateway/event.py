@@ -28,7 +28,7 @@ __all__ = ("Event", "Events", "Collector", "Listener")
 T = TypeVar(
     "T",
     bound=Literal[
-        "*",
+        "WILDCARD",
         "READY",
         "CHANNEL_CREATE",
         "CHANNEL_UPDATE",
@@ -254,7 +254,7 @@ class Event(Generic[T]):
 
     @overload
     async def wait(
-        self: Event[Literal["*"]],
+        self: Event[Literal["WILDCARD"]],
         timeout: None | float = None,
         check: Check = lambda *_: True,
     ) -> tuple[Event[Any], dict[Any, Any]]:
@@ -278,7 +278,7 @@ class Event(Generic[T]):
 
 
 class Events:
-    WILDCARD = Event("*")
+    WILDCARD = Event("WILDCARD")
     READY = Event("READY")
 
     CHANNEL_CREATE = Event("CHANNEL_CREATE")

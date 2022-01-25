@@ -63,36 +63,20 @@ class Gateway(aiohttp.ClientWebSocketResponse):
             int(OPCode.RECONNECT): self.reconnect,
         }
 
-    async def send_dispatch(self, data: dict[Any, Any]) -> None:
+    async def send_dispatch(self, data: dict[Any, Any]) -> asyncio.Task[Any]:
         dispatch = self.client.dispatch
         event = getattr(Events, data["t"])
 
-        assert self.client.loop is not None
         if event == "READY":
             self.session_id = data["d"]["session_id"]
 
         parser = getattr(dispatch.parser, f"parse_{event.name.lower()}", None)
+        dispatch(Events.WILDCARD, event, data["d"])
 
         if parser is not None:
-            self._loop.create_task(parser(data["d"]))
+            return self._loop.create_task(parser(data["d"]))
 
-        elif parser is None:
-            self._loop.create_task(dispatch.parser.no_parse(event, data["d"]))
-
-        for wildcard in Events.WILDCARD.listeners:
-            if wildcard.check(event, data["d"]):
-                self.client.loop.create_task(wildcard(event, data["d"]))
-
-        for future, check in Events.WILDCARD.futures[:]:
-            if check(event, data["d"]):
-                future.set_result((event, data["d"]))
-                Events.WILDCARD.futures.remove((future, check))
-
-        for collector in Events.WILDCARD.collectors:
-            if collector.check(event, data["d"]):
-                self.client.loop.create_task(
-                    collector.dispatch(self.client.loop, event, data["d"])
-                )
+        return self._loop.create_task(dispatch.parser.no_parse(event, data["d"]))
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)
@@ -154,7 +138,9 @@ class Gateway(aiohttp.ClientWebSocketResponse):
                 elif received["op"] == OPCode.HEARTBEAT_ACK:
                     _log.debug("GATEWAY ACK: HEARTBEAT")
 
-        _log.debug(f"WEBSOCKET CLOSED WITH CODE: {self.close_code} REASON: {self.close_reason}")
+        _log.debug(
+            f"WEBSOCKET CLOSED WITH CODE: {self.close_code} REASON: {self.close_reason}"
+        )
 
     @property
     def identify(self) -> IdentifyData:

@@ -57,8 +57,8 @@ class User(Cacheable, max=1000):
         The premium type of the user.
     """
 
-    _client: GatewayClient = attr.field()
-    _data: UserData = attr.field()
+    _client: GatewayClient = attr.field(repr=False)
+    _data: UserData = attr.field(repr=False)
 
     id: int = attr.field(init=False)
     username: str = attr.field(init=False)
