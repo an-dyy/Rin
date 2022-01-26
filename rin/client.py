@@ -59,9 +59,9 @@ class GatewayClient:
         The dispatch manager for the client.
     """
 
-    token: str = attr.field()
+    token: str = attr.field(repr=False)
     intents: Intents = attr.field(kw_only=True, default=Intents.default())
-    loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)  # type: ignore
+    loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)
 
     rest: RESTClient = attr.field(init=False)
     gateway: Gateway = attr.field(init=False)
