@@ -11,7 +11,7 @@ class TestCache(unittest.TestCase):
     """Test :class:`.Base`"""
 
     def setUp(self) -> None:
-        self.client = rin.GatewayClient("TOKEN")
+        self.client = rin.GatewayClient("DISCORD_TOKEN")
 
     def test_attributes(self) -> None:
         @attr.s()
