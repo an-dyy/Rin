@@ -9,7 +9,7 @@ __all__ = ("User",)
 
 
 @attr.s(slots=True)
-class User(Base, Cacheable, max=1000):
+class User(Base, Cacheable):
     """Represents a User.
 
     .. note::

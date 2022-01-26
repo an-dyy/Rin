@@ -16,9 +16,10 @@ from typing import (
 
 import attr
 
-from ..models import User
 
 if TYPE_CHECKING:
+    from ..models import User, Message
+
     Timeout = None | float
     Check = Callable[..., bool]
     Callback = Callable[..., Any]
@@ -266,6 +267,14 @@ class Event(Generic[T]):
         timeout: None | float = None,
         check: Check = lambda *_: True,
     ) -> User:
+        ...
+
+    @overload
+    async def wait(
+        self: Event[Literal["MESSAGE_CREATE"]],
+        timeout: None | float = None,
+        check: Check = lambda *_: True,
+    ) -> Message:
         ...
 
     async def wait(

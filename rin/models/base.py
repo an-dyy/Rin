@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import attr
+import functools
 
 from .cacheable import Cacheable
 
@@ -32,13 +33,17 @@ class Base:
 
     @staticmethod
     def field(
-        *, key: str, cls: type[Any] = str, has_client: bool = False, **kwargs: Any
+        *,
+        key: None | str = None,
+        cls: type[Any] = str,
+        has_client: bool = False,
+        **kwargs: Any
     ) -> Any:
         """Used as an attribute placeholder.
 
         Parameters
         ----------
-        key: :class:`str`
+        key: None | :class:`str`
             The key to use when initializing the instance.
 
         cls: :class:`type`
@@ -52,7 +57,14 @@ class Base:
         """
         return attr.field(
             init=False,
-            metadata={"key": key, "cls": cls, "has_client": has_client},
+            default=kwargs.pop("default", None),
+            repr=kwargs.pop("repr", False),
+            metadata={
+                "key": key,
+                "cls": cls,
+                "has_client": has_client,
+                "constructor": kwargs.pop("constructor", None),
+            },
             **kwargs,
         )
 
@@ -67,22 +79,31 @@ class Base:
             if attribute.name in {"client", "data"}:
                 continue
 
-            data = attribute.metadata
-            if value := self.data.get(data["key"]):
-                if data["has_client"] is True:
-                    setattr(self, attribute.name, data["cls"](self.client, value))
-                    continue
+            metadata = attribute.metadata
+            value = self.data.get(metadata["key"] or attribute.name)
+            class_type = metadata["cls"]
 
-                setattr(self, attribute.name, data["cls"](value))
+            if value is None:
+                setattr(self, attribute.name, attribute.default)
+                continue
 
-            elif value is None:
-                setattr(
-                    self,
-                    attribute.name,
-                    attribute.default
-                    if attribute.default is not attr.NOTHING
-                    else value,
+            construct = (
+                (
+                    functools.partial(class_type, self.client)
+                    if metadata["has_client"]
+                    else functools.partial(class_type)
                 )
+                if metadata["constructor"] is None
+                else metadata["constructor"]
+            )
+
+            if isinstance(value, list):
+                items: list[Any] = value
+
+                setattr(self, attribute.name, [construct(item) for item in items])
+                continue
+
+            setattr(self, attribute.name, construct(value))
 
         if isinstance(self, Cacheable) and getattr(self, "id", None) is not None:
             self.__class__.cache.set(getattr(self, "id"), self)
