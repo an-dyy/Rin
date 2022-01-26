@@ -5,7 +5,7 @@ from typing import Any
 import attr
 from datetime import datetime
 
-from . import Base, Cacheable, User
+from .. import Base, Cacheable, User
 
 __all__ = ("Message",)
 
