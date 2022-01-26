@@ -60,6 +60,11 @@ Base
 .. autoclass:: Base
     :members:
 
+Intents
+~~~~~~~
+.. autoclass:: Intents
+    :members:
+
 User
 ~~~~
 .. autoclass:: User
