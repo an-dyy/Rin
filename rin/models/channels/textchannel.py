@@ -1,27 +1,33 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import attr
 
-from .. import Base, Cacheable
 from .types import ChannelType
+
+from ..base import Base
+from ..cacheable import Cacheable
+
+if TYPE_CHECKING:
+    from ..guild import Guild
 
 __all__ = ("TextChannel",)
 
 
 @attr.s(slots=True)
 class TextChannel(Base, Cacheable):
-    id: int = Base.field(cls=int, repr=True)
+    id: int = Base.field(cls=int)
     type: ChannelType = Base.field(default=ChannelType.GUILD_TEXT)
 
-    guild_id: int = Base.field(cls=int, repr=True)
-    position: int = Base.field(cls=int, repr=True)
+    guild_id: int = Base.field(cls=int)
+    guild: Guild = Base.field()
 
-    name: str = Base.field(repr=True)
+    name: str = Base.field()
     topic: None | str = Base.field()
     nsfw: bool = Base.field(default=False)
+    position: int = Base.field(cls=int)
 
     last_message_id: None | int = Base.field(cls=int)
     last_pinned_at: None | datetime = Base.field(

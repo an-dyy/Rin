@@ -16,8 +16,14 @@ text_check: Check = lambda c: c["type"] == 0
 
 @attr.s(slots=True)
 class Guild(Base, Cacheable):
-    id: int = Base.field(cls=int)
+    id: int = Base.field(cls=int, repr=True)
 
     text_channels: list[TextChannel] = Base.field(
         cls=TextChannel, check=text_check, has_client=True, key="channels"
     )
+
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
+        for channel in self.text_channels:
+            channel.guild = self
