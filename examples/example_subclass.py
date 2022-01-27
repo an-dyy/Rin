@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import asyncio
 import os
 
@@ -18,7 +16,7 @@ class GatewayClient(rin.GatewayClient):
         print(f"[LOGGED IN AS]: {user.id}")
 
     @rin.Events.MESSAGE_CREATE.on()
-    async def on_message(self, message: dict[Any, Any]) -> None:
+    async def on_message(self, message: rin.Message) -> None:
         print(f"Received a message! {message}")
 
 
