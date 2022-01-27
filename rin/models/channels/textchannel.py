@@ -13,13 +13,13 @@ __all__ = ("TextChannel",)
 
 @attr.s(slots=True)
 class TextChannel(Base, Cacheable):
-    id: int = Base.field(cls=int)
+    id: int = Base.field(cls=int, repr=True)
     type: ChannelType = Base.field(default=ChannelType.GUILD_TEXT)
 
-    guild_id: int = Base.field(cls=int)
-    position: int = Base.field(cls=int)
+    guild_id: int = Base.field(cls=int, repr=True)
+    position: int = Base.field(cls=int, repr=True)
 
-    name: str = Base.field()
+    name: str = Base.field(repr=True)
     topic: None | str = Base.field()
     nsfw: bool = Base.field(default=False)
 
