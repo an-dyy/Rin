@@ -5,7 +5,10 @@ from typing import Any
 
 import attr
 
-from .. import Base, Cacheable, TextChannel, User
+from ..base import Base
+from ..cacheable import Cacheable
+from ..channels import TextChannel
+from ..user import User
 
 __all__ = ("Message",)
 
