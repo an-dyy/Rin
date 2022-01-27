@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, TypeVar, Any, Callable
 import signal
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import aiohttp
 import attr
 
-from .utils import ensure_loop
 from .gateway import Collector, Dispatch, Event, Gateway, Listener
 from .models import Intents, User
 from .rest import RESTClient, Route
+from .utils import ensure_loop
 
 if TYPE_CHECKING:
     Callback = Callable[..., Any]

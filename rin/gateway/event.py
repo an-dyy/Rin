@@ -16,9 +16,8 @@ from typing import (
 
 import attr
 
-
 if TYPE_CHECKING:
-    from ..models import User, Message
+    from ..models import Message, User
 
     Timeout = None | float
     Check = Callable[..., bool]

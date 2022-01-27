@@ -44,7 +44,8 @@ class Dispatch:
 
         for future, check in event.futures[:]:
             if check(*payload):
-                future.set_result(*payload)
+                payload = payload[0] if len(payload) == 1 else payload
+                future.set_result(payload)
                 event.futures.pop()
 
         for listener in event.listeners:

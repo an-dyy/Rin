@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import attr
 
-from .cacheable import Cacheable
 from .base import Base
+from .cacheable import Cacheable
 
 __all__ = ("User",)
 

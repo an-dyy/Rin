@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import attr
-from datetime import datetime
 
-from .. import Base, Cacheable, User
+from .. import Base, Cacheable, TextChannel, User
 
 __all__ = ("Message",)
 
@@ -13,6 +13,7 @@ __all__ = ("Message",)
 @attr.s(slots=True)
 class Message(Base, Cacheable, max=1000):
     id: int = Base.field(cls=int, repr=True)
+    channel: TextChannel = Base.field()
 
     channel_id: int = Base.field(cls=int, repr=True)
     guild_id: int = Base.field(cls=int)
@@ -53,3 +54,7 @@ class Message(Base, Cacheable, max=1000):
     components: None | list[dict[Any, Any]] = Base.field()
 
     stickers: None | list[dict[Any, Any]] = Base.field(key="sticker_items")
+
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+        self.channel = TextChannel.cache[self.channel_id]  # type: ignore

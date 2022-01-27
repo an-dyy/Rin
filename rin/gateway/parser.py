@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import User, Message
+from ..models import Guild, Message, TextChannel, User
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -26,5 +26,19 @@ class Parser:
 
         self.dispatch(Events.READY, user)
 
+    async def parse_guild_create(self, data: dict[Any, Any]) -> None:
+        self.dispatch(Events.GUILD_CREATE, Guild(self.client, data))
+
     async def parse_message_create(self, data: dict[Any, Any]) -> None:
         self.dispatch(Events.MESSAGE_CREATE, Message(self.client, data))
+
+    async def parse_message_delete(self, data: dict[Any, Any]) -> None:
+        message = Message.cache.root.pop(data["id"], data)
+        self.dispatch(Events.MESSAGE_DELETE, message)
+
+    async def parse_message_update(self, data: dict[Any, Any]) -> None:
+        if TextChannel.cache.get(int(data["channel_id"])):
+            before = Message.cache.get(int(data["id"]))
+            after = Message(self.client, data)
+
+            self.dispatch(Events.MESSAGE_UPDATE, before, after)

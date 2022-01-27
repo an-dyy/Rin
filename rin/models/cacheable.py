@@ -60,6 +60,9 @@ class Cache(Generic[T]):
 
         return value
 
+    def __getitem__(self, key: str | int) -> T:
+        return self.root[key]
+
     def set(self, key: str | int, value: T) -> T:
         """Sets a key to the given value.
 

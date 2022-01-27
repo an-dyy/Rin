@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING, Any
 
 import attr
-import functools
 
 from .cacheable import Cacheable
 
@@ -93,8 +93,12 @@ class Base:
                     if metadata["has_client"]
                     else functools.partial(class_type)
                 )
-                if metadata["constructor"] is None
-                else metadata["constructor"]
+                if not metadata["constructor"]
+                else (
+                    functools.partial(metadata["constructor"], self.client)
+                    if metadata["has_client"]
+                    else functools.partial(metadata["constructor"])
+                )
             )
 
             if isinstance(value, list):
