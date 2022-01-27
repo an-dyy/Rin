@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Callable
 
 import attr
 
@@ -9,19 +9,15 @@ from ..cacheable import Cacheable
 from ..channels import TextChannel
 
 if TYPE_CHECKING:
-    from ...client import GatewayClient
+    Check = Callable[..., bool]
 
-
-def create_channels(client: GatewayClient, data: dict[Any, Any]) -> Any:
-    type: int = data["type"]
-
-    if type == 0:
-        return TextChannel(client, data)
+text_check: Check = lambda c: c["type"] == 0
 
 
 @attr.s(slots=True)
 class Guild(Base, Cacheable):
     id: int = Base.field(cls=int)
-    channels: list[TextChannel] = Base.field(
-        constructor=create_channels, has_client=True
+
+    text_channels: list[TextChannel] = Base.field(
+        cls=TextChannel, check=text_check, has_client=True, key="channels"
     )

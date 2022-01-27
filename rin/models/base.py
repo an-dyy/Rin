@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import attr
 
@@ -52,6 +52,12 @@ class Base:
         has_client: :class:`bool`
             If the class being used needs :class:`.GatewayClient` to be passed.
 
+        constructor: Callable[..., Any]
+            The constructor to use.
+
+        check: Callable[..., bool]
+            A check that items need to pass when passed a list.
+
         kwargs: Any
             Extra options to pass when calling :meth:`attr.field`.
         """
@@ -64,6 +70,7 @@ class Base:
                 "cls": cls,
                 "has_client": has_client,
                 "constructor": kwargs.pop("constructor", None),
+                "check": kwargs.pop("check", None),
             },
             **kwargs,
         )
@@ -103,8 +110,13 @@ class Base:
 
             if isinstance(value, list):
                 items: list[Any] = value
+                check: Callable[..., bool] = metadata["check"] or (lambda *_: True)
 
-                setattr(self, attribute.name, [construct(item) for item in items])
+                setattr(
+                    self,
+                    attribute.name,
+                    [construct(item) for item in items if check(item)],
+                )
                 continue
 
             setattr(self, attribute.name, construct(value))
