@@ -51,10 +51,10 @@ class User(Base, Cacheable):
         The premium type of the user.
     """
 
-    id: int = Base.field(key="id", cls=int)
+    id: int = Base.field(key="id", cls=int, repr=True)
 
-    username: str = Base.field(key="username")
-    discriminator: str = Base.field(key="discriminator")
+    username: str = Base.field(key="username", repr=True)
+    discriminator: str = Base.field(key="discriminator", repr=True)
 
     avatar: None | str = Base.field(key="avatar")
     banner: None | str = Base.field(key="banner")

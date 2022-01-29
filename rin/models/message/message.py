@@ -28,7 +28,7 @@ class Message(Base, Cacheable, max=1000):
     guild: Guild = Base.field()
 
     user: User = Base.field(cls=User)
-    member: dict[Any, Any] = Base.field()
+    member: dict[Any, Any] = Base.field(key="author")
     author: User | dict[Any, Any] = Base.field()
 
     content: str = Base.field()
@@ -39,7 +39,7 @@ class Message(Base, Cacheable, max=1000):
     tts: bool = Base.field()
     mentioned_everyone = Base.field(key="mention_everyone")
 
-    mentions: list[User] = Base.field(cls=User)
+    mentions: list[User] = Base.field(cls=User, has_client=True)
     mentioned_roles: list[dict[Any, Any]] = Base.field()
     mentioned_channels: list[dict[Any, Any]] = Base.field()
 
