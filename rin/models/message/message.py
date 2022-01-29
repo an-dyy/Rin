@@ -105,8 +105,7 @@ class Message(Base, Cacheable, max=1000):
             channel_id=self.channel_id,
         )
 
-        a = await self.client.rest.request("PUT", route)
-        print(a)
+        await self.client.rest.request("PUT", route)
 
     async def delete_reaction(
         self, reaction: str, user: None | Snowflake = None
