@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
 
 import attr
 
@@ -62,6 +62,16 @@ class Cache(Generic[T]):
 
     def __getitem__(self, key: str | int) -> T:
         return self.root[key]
+
+    def iterator(self) -> Iterator[T]:
+        """An iterator for the cache's values.
+
+        Returns
+        -------
+        :class:`typing.Iterator[T]`
+            An iterator of the values.
+        """
+        yield from self.root.values()
 
     def set(self, key: str | int, value: T) -> T:
         """Sets a key to the given value.

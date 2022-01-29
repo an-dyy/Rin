@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from .types import ChannelType
-
 from ..base import Base
 from ..cacheable import Cacheable
+from .types import ChannelType
 
 if TYPE_CHECKING:
     from ..guild import Guild
