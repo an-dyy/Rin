@@ -6,9 +6,11 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
 
 import attr
+import functools
 
 if TYPE_CHECKING:
     from ..models import Message, User
+    from ..client import GatewayClient
 
     Timeout = None | float
     Check = Callable[..., bool]
@@ -81,6 +83,7 @@ class Listener:
     callback: Callable[..., Any] = attr.field()
     check: Callable[..., bool] = attr.field()
     in_class: bool = attr.field()
+    once: bool = attr.field(default=False)
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
@@ -100,11 +103,10 @@ class Collector:
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
-    async def dispatch(
-        self, loop: asyncio.AbstractEventLoop, *args: Any, **kwargs: Any
-    ) -> None | asyncio.Task[Any]:
-        client = kwargs.get("client")
+    async def dispatch(self, *args: Any, **kwargs: Any) -> None | asyncio.Task[Any]:
         self.recent_dispatch = datetime.utcnow()
+        loop = asyncio.get_running_loop()
+        client = kwargs.get("client")
 
         if self.queue.qsize() == 0:
             self.first_dispatch = datetime.utcnow()
@@ -133,23 +135,60 @@ class Collector:
 class Event(Generic[T]):
     name: T = attr.field()
 
+    listeners: list[Listener] = attr.field(init=False)
+    collectors: list[Collector] = attr.field(init=False)
+
     futures: list[tuple[asyncio.Future[Any], Callable[..., bool]]] = attr.field(
         init=False
     )
 
-    listeners: list[Listener] = attr.field(init=False)
-    collectors: list[Collector] = attr.field(init=False)
-    temp: list[Listener] = attr.field(init=False)
-
     def __attrs_post_init__(self) -> None:
         self.futures: list[tuple[asyncio.Future[Any], Callable[..., bool]]] = []
-
         self.listeners: list[Listener] = []
         self.collectors: list[Collector] = []
-        self.temp: list[Listener] = []
 
     def __str__(self) -> str:
         return self.name
+
+    def dispatch(self, *payload: Any, **kwargs: Any) -> list[asyncio.Task[Any]]:
+        tasks: list[asyncio.Task[Any]] = []
+        client: GatewayClient = kwargs["client"]
+
+        futures = self.futures[:]
+        collectors = self.collectors[:]
+        listeners = self.listeners[:]
+
+        for index, listener in enumerate(listeners):
+            if not listener.check(*payload):
+                continue
+
+            partial = functools.partial(listener)
+            if listener.in_class:
+                partial = functools.partial(listener, client)
+
+            tasks.append(client.loop.create_task(partial(*payload)))
+
+            if listener.once is True:
+                self.listeners.pop(index)
+
+        for index, (future, check) in enumerate(futures):
+            if not check(*payload):
+                continue
+
+            payload = payload[0] if len(payload) == 1 else payload
+            future.set_result(payload)
+            self.futures.pop(index)
+
+        for index, collector in enumerate(collectors):
+            if not collector.check(*payload):
+                continue
+
+            cls = client if collector.in_class else None
+            tasks.append(
+                client.loop.create_task(collector.dispatch(*payload, client=cls))
+            )
+
+        return tasks
 
     def subscribe(self, func: Callback, **kwargs: Any) -> Listener | Collector:
         """Subscribes a callback to an :class:`.Event`
@@ -198,10 +237,9 @@ class Event(Generic[T]):
             self.collectors.append(collector)
             return collector
 
-        listener = Listener(func, check, in_class=in_class)
-        if kwargs.get("once", False) is not False:
-            self.temp.append(listener)
-            return listener
+        listener = Listener(
+            func, check, in_class=in_class, once=kwargs.get("once", False)
+        )
 
         self.listeners.append(listener)
         return listener
