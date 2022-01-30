@@ -135,8 +135,8 @@ class RESTClient:
         404: NotFound,
     }
 
-    token: str = attr.field()
-    client: GatewayClient = attr.field()
+    token: str = attr.field(repr=False)
+    client: GatewayClient = attr.field(repr=False)
 
     semaphores: dict[str, asyncio.Semaphore] = attr.field(init=False)
     session: aiohttp.ClientSession = attr.field(init=False)

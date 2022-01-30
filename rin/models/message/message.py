@@ -68,8 +68,7 @@ class Message(Base, Cacheable, max=1000):
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        self.channel = TextChannel.cache[self.channel_id]
-        self.author = self.member or self.user
+        self.channel = TextChannel.cache[self.channel_id]  # type: ignore
 
     async def delete(self) -> None:
         """Deletes the message.

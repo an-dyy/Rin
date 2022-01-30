@@ -2,17 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Generic,
-    Literal,
-    NamedTuple,
-    TypeVar,
-    overload,
-)
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
 
 import attr
 
@@ -85,42 +76,57 @@ T = TypeVar(
 )
 
 
-class Listener(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-    in_class: bool = False
+@attr.s(slots=True)
+class Listener:
+    callback: Callable[..., Any] = attr.field()
+    check: Callable[..., bool] = attr.field()
+    in_class: bool = attr.field()
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
 
-class Collector(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-    queue: asyncio.Queue[Any]
-    in_class: bool = False
+@attr.s(slots=True)
+class Collector:
+    callback: Callable[..., Any] = attr.field()
+    check: Callable[..., bool] = attr.field()
+    queue: asyncio.Queue[Any] = attr.field()
+    timeout: timedelta = attr.field(default=timedelta.max)
+    in_class: bool = attr.field(default=False)
+
+    first_dispatch: datetime = attr.field(init=False)
+    recent_dispatch: datetime = attr.field(init=False)
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
     async def dispatch(
-        self, loop: asyncio.AbstractEventLoop, *payload: Any, **kwargs: Any
+        self, loop: asyncio.AbstractEventLoop, *args: Any, **kwargs: Any
     ) -> None | asyncio.Task[Any]:
-        task: None | asyncio.Task[Any] = None
+        client = kwargs.get("client")
+        self.recent_dispatch = datetime.utcnow()
 
-        await self.queue.put(payload)
+        if self.queue.qsize() == 0:
+            self.first_dispatch = datetime.utcnow()
+
+        difference = self.recent_dispatch - self.first_dispatch
+        if not difference <= self.timeout:
+            while not self.queue.empty():
+                self.queue.get_nowait()
+
+            return
+
+        await self.queue.put(args)
         self.queue.task_done()
 
         if self.queue.full():
             items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
+            payload = list(zip(*items))
 
-            if kwargs.get("client") is not None:
-                task = loop.create_task(self(kwargs["client"], *list(zip(*items))))
+            if client is not None:
+                return loop.create_task(self(client, *payload))
 
-            elif kwargs.get("client") is None:
-                task = loop.create_task(self(*list(zip(*items))))
-
-        return task
+            return loop.create_task(self(*payload))
 
 
 @attr.s(slots=True)
@@ -163,6 +169,9 @@ class Event(Generic[T]):
         check: Callable[..., bool]
             A check the event has to pass in order to dispatch.
 
+        timeout: :class:`datetime.timedelta`
+            A timeout for collectors.
+
         Raises
         ------
         :exc:`TypeError`
@@ -174,14 +183,19 @@ class Event(Generic[T]):
             The created listener or collector.
         """
         check: Check = kwargs.get("check") or (lambda *_: True)
+        timeout = kwargs.get("timeout") or timedelta.max
         in_class = "self" in inspect.signature(func).parameters
 
         if amount := kwargs.get("amount"):
             collector = Collector(
-                func, check, asyncio.Queue[Any](maxsize=amount), in_class=in_class
+                func,
+                check,
+                asyncio.Queue[Any](maxsize=amount),
+                in_class=in_class,
+                timeout=timeout,
             )
-            self.collectors.append(collector)
 
+            self.collectors.append(collector)
             return collector
 
         listener = Listener(func, check, in_class=in_class)
@@ -193,7 +207,11 @@ class Event(Generic[T]):
         return listener
 
     def collect(
-        self, *, amount: int, check: Check = lambda *_: True
+        self,
+        *,
+        amount: int,
+        check: Check = lambda *_: True,
+        timeout: timedelta = timedelta.max,
     ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
@@ -205,13 +223,18 @@ class Event(Generic[T]):
         amount: :class:`int`
             The amount to collect before dispatching.
 
+        once: :class:`bool`
+            If the collector should be dispatched one-time only.
+
         check: Callable[..., bool]
-            The check needed to be valid in order to collect
-            an event.
+            The check needed to be valid in order to collect an event.
+
+        timeout: :class:`datetime.timedelta`
+            A timeout for collectors.
         """
 
         def inner(func: Callback) -> Collector:
-            ret = self.subscribe(func, amount=amount, check=check)
+            ret = self.subscribe(func, amount=amount, check=check, timeout=timeout)
             assert isinstance(ret, Collector)
 
             return ret

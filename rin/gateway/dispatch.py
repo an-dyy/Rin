@@ -58,12 +58,12 @@ class Dispatch:
 
         for collector in event.collectors:
             if not collector.check(*payload):
-                return tasks
+                continue
 
             client = self.client if collector.in_class else None
             tasks.append(
                 self.loop.create_task(
-                    collector.dispatch(self.loop, *payload, client=client)
+                    collector.dispatch(self.loop, *payload, client=client, event=event)
                 )
             )
 
