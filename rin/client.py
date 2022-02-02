@@ -61,6 +61,7 @@ class GatewayClient:
 
     token: str = attr.field(repr=False)
     intents: Intents = attr.field(kw_only=True, default=Intents.default())
+    no_chunk: bool = attr.field(kw_only=True, default=False)
     loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)
 
     rest: RESTClient = attr.field(init=False)

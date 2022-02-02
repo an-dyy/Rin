@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
-__all__ = ("DispatchData", "IdentifyData", "ResumeData", "HeartbeatData")
+__all__ = ("DispatchData", "IdentifyData", "ResumeData", "HeartbeatData", "ChunkData")
 
 
 class DispatchData(TypedDict):
@@ -27,3 +27,8 @@ class ResumeData(TypedDict):
 class HeartbeatData(TypedDict):
     op: int
     d: int
+
+
+class ChunkData(TypedDict):
+    op: int
+    d: dict[str, str | int | list[int] | None]

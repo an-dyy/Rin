@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import Guild, Message, TextChannel, User
+from ..models import Guild, Member, Message, TextChannel, User
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -27,7 +27,21 @@ class Parser:
         self.dispatch(Events.READY, user)
 
     async def parse_guild_create(self, data: dict[Any, Any]) -> None:
-        self.dispatch(Events.GUILD_CREATE, Guild(self.client, data))
+        guild = Guild(self.client, data)
+        intents = self.client.intents
+
+        if intents.guild_members is True and intents.guild_presences is False:
+            if self.client.no_chunk is not True:
+                await guild.chunk()
+
+        self.dispatch(Events.GUILD_CREATE, guild)
+
+    async def parse_guild_members_chunk(self, data: dict[Any, Any]) -> None:
+        members = [Member(self.client, member_data) for member_data in data["members"]]
+        if guild := Guild.cache.get(int(data["guild_id"])):
+            guild.members = members
+
+        self.dispatch(Events.GUILD_MEMBERS_CHUNK, members)
 
     async def parse_message_create(self, data: dict[Any, Any]) -> None:
         self.dispatch(Events.MESSAGE_CREATE, Message(self.client, data))

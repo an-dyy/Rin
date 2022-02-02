@@ -17,7 +17,7 @@ from typing import (
 import attr
 
 if TYPE_CHECKING:
-    from ..models import Message, User
+    from ..models import Member, Message, User
 
     Timeout = None | float
     Check = Callable[..., bool]
@@ -276,8 +276,16 @@ class Event(Generic[T]):
     ) -> Message:
         ...
 
+    @overload
     async def wait(
-        self, timeout: None | float = None, check: Check = lambda *_: True
+        self: Event[Literal["GUILD_MEMBERS_CHUNK"]],
+        timeout: None | float = None,
+        check: Check = lambda *_: True,
+    ) -> list[Member]:
+        ...
+
+    async def wait(
+        self: Event[Any], timeout: None | float = None, check: Check = lambda *_: True
     ) -> Any:
         future = asyncio.get_running_loop().create_future()
         self.futures.append((future, check))

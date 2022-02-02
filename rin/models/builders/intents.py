@@ -145,6 +145,29 @@ class Intents(metaclass=IntentsMeta):
     def __init__(self, value: int = 0) -> None:
         self.value: int = value
 
+        self.guilds: bool
+        self.guild_bans: bool
+        self.guild_members: bool
+        self.guild_bans: bool
+
+        self.guild_emojis_and_stickers: bool
+        self.guild_integrations: bool
+        self.guild_webhooks: bool
+        self.guild_invites: bool
+
+        self.guild_voice_states: bool
+        self.guild_presences: bool
+
+        self.guild_message: bool
+        self.guild_message_reactions: bool
+        self.guild_message_typing: bool
+
+        self.direct_messages: bool
+        self.direct_message_reactions: bool
+        self.direct_message_typing: bool
+
+        self.guild_scheduled_events: bool
+
     @classmethod
     def create(cls: type[Intents], **kwargs: bool) -> Intents:
         """Creates an intents instance with a value specific to
@@ -170,6 +193,9 @@ class Intents(metaclass=IntentsMeta):
 
         self = cls(0)
 
+        for intent in intents:
+            setattr(self, intent, False)
+
         for attr, value in kwargs.items():
             intent = intents.get(attr)
 
@@ -178,6 +204,7 @@ class Intents(metaclass=IntentsMeta):
 
             if value is True:
                 self.value |= intent
+                setattr(self, attr, value)
 
             elif value is False:
                 self.value &= ~intent
@@ -185,24 +212,61 @@ class Intents(metaclass=IntentsMeta):
         return self
 
     @classmethod
-    def default(cls: type[Intents]) -> Intents:
-        """Creates an intents instance without privileged intents."""
-        self = cls.create()
+    def default(cls: type[Intents], **kwargs: bool) -> Intents:
+        """Creates an intents instance without privileged intents.
 
-        for intent, value in self.__intents__.items():
-            if intent == "guild_presences" or intent == "guild_members":
-                continue
+        Parameters
+        ----------
+        kwargs: class:`bool`
+            Extra intents to create along side the default ones.
 
-            self.value |= value
-
-        return self
+        Returns
+        -------
+        :class:`.Intents`
+            A created intents instance with the corresponding value.
+        """
+        return cls.create(
+            **kwargs,
+            guilds=True,
+            guild_bans=True,
+            guild_emojis_and_stickers=True,
+            guild_integrations=True,
+            guild_webhooks=True,
+            guild_invites=True,
+            guild_voice_states=True,
+            guild_messages=True,
+            guild_message_reactions=True,
+            guild_message_typing=True,
+            direct_messages=True,
+            direct_message_reactions=True,
+            direct_message_typing=True,
+            guild_scheduled_events=True,
+        )
 
     @classmethod
-    def privileged(cls: type[Intents]) -> Intents:
-        """Creates an intents instance with only privileged intents."""
-        return cls.create(guild_members=True, guild_presences=True)
+    def privileged(cls: type[Intents], **kwargs: bool) -> Intents:
+        """Creates an intents instance with only privileged intents.
+
+        Parameters
+        ----------
+        kwargs: class:`bool`
+            Extra intents to create along side the privileged ones.
+
+        Returns
+        -------
+        :class:`.Intents`
+            A created intents instance with the corresponding value.
+
+        """
+        return cls.create(**kwargs, guild_members=True, guild_presences=True)
 
     @classmethod
     def none(cls: type[Intents]) -> Intents:
-        """Creates an intents instance without any intents."""
+        """Creates an intents instance without any intents.
+
+        Returns
+        -------
+        :class:`.Intents`
+            A created intents instance with no value.
+        """
         return cls(0)

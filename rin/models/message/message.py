@@ -28,13 +28,12 @@ class Message(Base, Cacheable, max=1000):
     guild: Guild = Base.field()
 
     user: User = Base.field(cls=User)
-    member: dict[Any, Any] = Base.field(key="author")
+    member: dict[Any, Any] = Base.field()
     author: User | dict[Any, Any] = Base.field()
 
     content: str = Base.field()
     timestamp: datetime = Base.field(constructor=datetime.fromisoformat)
     editted_timestamp: datetime = Base.field(constructor=datetime.fromisoformat)
-    created_at: datetime = Base.field()
 
     tts: bool = Base.field()
     mentioned_everyone = Base.field(key="mention_everyone")

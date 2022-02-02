@@ -12,11 +12,17 @@ from .event import Events
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
-    from rin.types import DispatchData, HeartbeatData, IdentifyData, ResumeData
+    from rin.types import (
+        ChunkData,
+        DispatchData,
+        HeartbeatData,
+        IdentifyData,
+        ResumeData,
+    )
 
     from ..client import GatewayClient
 
-    PayloadData = IdentifyData | DispatchData | ResumeData | HeartbeatData
+    PayloadData = IdentifyData | DispatchData | ResumeData | HeartbeatData | ChunkData
 
 __all__ = ("Gateway",)
 
@@ -149,6 +155,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
             "d": {
                 "token": self.client.rest.token,
                 "intents": self.intents,
+                "large_threshold": 250,
                 "properties": {
                     "$os": sys.platform,
                     "$browser": "Rin 0.1.0-alpha",

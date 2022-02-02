@@ -37,7 +37,7 @@ class Base:
         key: None | str = None,
         cls: type[Any] = str,
         has_client: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Any:
         """Used as an attribute placeholder.
 
