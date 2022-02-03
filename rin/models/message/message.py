@@ -11,9 +11,12 @@ from ..cacheable import Cacheable
 from ..channels import TextChannel
 from ..snowflake import Snowflake
 from ..user import User
+from .partial import PartialSender
 
 if TYPE_CHECKING:
+    from ..builders import EmbedBuilder
     from ..guild import Guild
+    from .mentions import AllowedMentions
 
 __all__ = ("Message",)
 
@@ -69,6 +72,71 @@ class Message(Base, Cacheable, max=1000):
         super().__attrs_post_init__()
         self.channel = TextChannel.cache[self.channel_id]
         self.author = self.member or self.user
+
+    def to_reference(self) -> dict[str, int]:
+        """Creates a reference dict from the message.
+
+        This is used for replies.
+
+        Returns
+        -------
+        :class:`dict`
+            The created dict for the message.
+        """
+        payload = {"message_id": self.id, "channel_id": self.channel.id}
+
+        if self.guild:
+            payload["guild_id"] = self.guild.id
+
+        return payload
+
+    async def reply(
+        self,
+        content: None | str = None,
+        tts: bool = False,
+        embed: None | EmbedBuilder = None,
+        embeds: list[EmbedBuilder] = [],
+        allowed_mentions: None | AllowedMentions = None,
+    ) -> Message:
+        """Replies to the message.
+
+        Parameters
+        ----------
+        content: None | str
+            The content of the reply.
+
+        tts: bool
+            If text-to-speech should be used when replying.
+
+        embed: None | :class:`EmbedBuilder`
+            The embed to send with the reply.
+
+        embeds: :class:`list`
+            A list of embeds to send with the reply. Can only send 10 embeds at a time.
+
+        allowed_mentions: None | :class:`.AllowedMentions`
+            The allowed mentions of the reply.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong.
+
+        Returns
+        -------
+        :class:`.Message`
+            The newly created reply as a :class:`.Message` instance.
+        """
+
+        partial = PartialSender(self.client, self.channel.id)
+        return await partial.send(
+            reply=self,
+            content=content,
+            tts=tts,
+            embed=embed,
+            embeds=embeds,
+            allowed_mentions=allowed_mentions,
+        )
 
     async def delete(self) -> None:
         """Deletes the message.

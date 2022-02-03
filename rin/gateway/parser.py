@@ -57,3 +57,6 @@ class Parser:
             after = Message(self.client, data)
 
             self.client.dispatch(Events.MESSAGE_UPDATE, before, after)
+
+    def create_message(self, data: dict[Any, Any]) -> Message:
+        return Message(self.client, data)
