@@ -9,18 +9,12 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 import aiohttp
 
 from .event import Events
+from .parser import Parser
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
-    from rin.types import (
-        ChunkData,
-        DispatchData,
-        HeartbeatData,
-        IdentifyData,
-        ResumeData,
-    )
-
     from ..client import GatewayClient
+    from ..types import ChunkData, DispatchData, HeartbeatData, IdentifyData, ResumeData
 
     PayloadData = IdentifyData | DispatchData | ResumeData | HeartbeatData | ChunkData
 
@@ -52,6 +46,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
 
         self.ratelimiter = Ratelimiter(2, 1)
         self.client: GatewayClient
+        self.parser: Parser
         self.intents: int
 
         self.interval: float = 0
@@ -76,13 +71,13 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         if event == "READY":
             self.session_id = data["d"]["session_id"]
 
-        parser = getattr(dispatch.parser, f"parse_{event.name.lower()}", None)
+        parser = getattr(self.parser, f"parse_{event.name.lower()}", None)
         dispatch(Events.WILDCARD, event, data["d"])
 
         if parser is not None:
             return self._loop.create_task(parser(data["d"]))
 
-        return self._loop.create_task(dispatch.parser.no_parse(event, data["d"]))
+        return self._loop.create_task(self.parser.no_parse(event, data["d"]))
 
     async def send_resume(self, _: dict[Any, Any]) -> None:
         return await self.send(self.resume)
@@ -101,6 +96,7 @@ class Gateway(aiohttp.ClientWebSocketResponse):
         self.reconnect_future = client.loop.create_future()
 
         self.client = client
+        self.parser = Parser(client)
         self.intents = client.intents.value
 
         data = await self.receive_json()
@@ -155,7 +151,6 @@ class Gateway(aiohttp.ClientWebSocketResponse):
             "d": {
                 "token": self.client.rest.token,
                 "intents": self.intents,
-                "large_threshold": 250,
                 "properties": {
                     "$os": sys.platform,
                     "$browser": "Rin 0.1.0-alpha",

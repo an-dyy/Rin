@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import aiohttp
 import attr
 
-from .gateway import Collector, Dispatch, Event, Gateway, Listener
+from .gateway import Collector, Event, Gateway, Listener
 from .models import Intents, User
 from .rest import RESTClient, Route
 from .utils import ensure_loop
@@ -34,6 +35,9 @@ class GatewayClient:
     ----------
     token: :class:`str`
         The token to use for authorization.
+
+    no_chunk: :class:`bool`
+        If chunking at startup should be disabled.
 
     loop: None | :class:`asyncio.AbstractEventLoop`
         The loop to use for async operations.
@@ -66,14 +70,12 @@ class GatewayClient:
 
     rest: RESTClient = attr.field(init=False)
     gateway: Gateway = attr.field(init=False)
-    dispatch: Dispatch = attr.field(init=False)
     closed: bool = attr.field(init=False, default=False)
 
     user: None | User = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.rest = RESTClient(self.token, self)
-        self.dispatch = Dispatch(self)
 
     async def start(self, reconnect: bool = False) -> None:
         """Starts the connection.
@@ -84,7 +86,6 @@ class GatewayClient:
 
         if reconnect is not True and self.loop is None:
             self.loop = ensure_loop()
-            self.dispatch.loop = self.loop
 
         async def runner() -> None:
             if self.closed is True:
@@ -145,8 +146,37 @@ class GatewayClient:
         """
         return cls(self, data)
 
+    def dispatch(self, event: Event[Any], *payload: Any) -> list[asyncio.Task[Any]]:
+        """Dispatches an event.
+
+        Examples
+        --------
+        .. code:: python
+            client.dispatch(rin.Events.MESSAGE_CREATE, rin.Message(...))
+            # Here `rin.Message(...)` is the payload that gets dispatched to the event's callback.
+
+        Parameters
+        ----------
+        event: :class:`.Event`
+            The event to dispatch.
+
+        payload: Any
+            The payload to dispatch the event with.
+
+        Returns
+        -------
+        list[:class:`asyncio.Task`]
+            A list of tasks created by the dispatch call.
+        """
+        return event.dispatch(*payload, client=self)
+
     def collect(
-        self, event: Event[Any], *, amount: int, check: Check = lambda *_: True
+        self,
+        event: Event[Any],
+        *,
+        amount: int,
+        timeout: None | timedelta = None,
+        check: Check = lambda *_: True
     ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
@@ -171,7 +201,7 @@ class GatewayClient:
         """
 
         def inner(func: Callback) -> Collector:
-            ret = event.subscribe(func, amount=amount, check=check)
+            ret = event.subscribe(func, amount=amount, check=check, timeout=timeout)
             assert isinstance(ret, Collector)
 
             return ret
@@ -208,7 +238,6 @@ class GatewayClient:
         self, event: Event[Any], check: Check = lambda *_: True
     ) -> Callable[..., Listener]:
         """Registers a onetime callback to an event.
-
         Parameters
         ----------
         event: :class:`.Event`

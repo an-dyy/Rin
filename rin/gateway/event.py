@@ -1,23 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import inspect
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Generic,
-    Literal,
-    NamedTuple,
-    TypeVar,
-    overload,
-)
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
 
 import attr
 
 if TYPE_CHECKING:
-    from ..models import Member, Message, User
+    from ..client import GatewayClient
+    from ..models import Message, User
 
     Timeout = None | float
     Check = Callable[..., bool]
@@ -85,65 +78,117 @@ T = TypeVar(
 )
 
 
-class Listener(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-    in_class: bool = False
+@attr.s(slots=True)
+class Listener:
+    callback: Callable[..., Any] = attr.field()
+    check: Callable[..., bool] = attr.field()
+    in_class: bool = attr.field()
+    once: bool = attr.field(default=False)
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
 
-class Collector(NamedTuple):
-    callback: Callable[..., Awaitable[Any]]
-    check: Callable[..., bool]
-    queue: asyncio.Queue[Any]
-    in_class: bool = False
+@attr.s(slots=True)
+class Collector:
+    callback: Callable[..., Any] = attr.field()
+    check: Callable[..., bool] = attr.field()
+    queue: asyncio.Queue[Any] = attr.field()
+    timeout: timedelta = attr.field(default=timedelta.max)
+    in_class: bool = attr.field(default=False)
+
+    first_dispatch: datetime = attr.field(init=False)
+    recent_dispatch: datetime = attr.field(init=False)
 
     async def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return await self.callback(*args, **kwargs)
 
-    async def dispatch(
-        self, loop: asyncio.AbstractEventLoop, *payload: Any, **kwargs: Any
-    ) -> None | asyncio.Task[Any]:
-        task: None | asyncio.Task[Any] = None
+    async def dispatch(self, *args: Any, **kwargs: Any) -> None | asyncio.Task[Any]:
+        self.recent_dispatch = datetime.utcnow()
+        loop = asyncio.get_running_loop()
+        client = kwargs.get("client")
 
-        await self.queue.put(payload)
+        if self.queue.qsize() == 0:
+            self.first_dispatch = datetime.utcnow()
+
+        difference = self.recent_dispatch - self.first_dispatch
+        if not difference <= self.timeout:
+            while not self.queue.empty():
+                self.queue.get_nowait()
+
+            return
+
+        await self.queue.put(args)
         self.queue.task_done()
 
         if self.queue.full():
             items = [self.queue.get_nowait() for _ in range(self.queue.maxsize)]
+            payload = list(zip(*items))
 
-            if kwargs.get("client") is not None:
-                task = loop.create_task(self(kwargs["client"], *list(zip(*items))))
+            if client is not None:
+                return loop.create_task(self(client, *payload))
 
-            elif kwargs.get("client") is None:
-                task = loop.create_task(self(*list(zip(*items))))
-
-        return task
+            return loop.create_task(self(*payload))
 
 
 @attr.s(slots=True)
 class Event(Generic[T]):
     name: T = attr.field()
 
+    listeners: list[Listener] = attr.field(init=False)
+    collectors: list[Collector] = attr.field(init=False)
+
     futures: list[tuple[asyncio.Future[Any], Callable[..., bool]]] = attr.field(
         init=False
     )
 
-    listeners: list[Listener] = attr.field(init=False)
-    collectors: list[Collector] = attr.field(init=False)
-    temp: list[Listener] = attr.field(init=False)
-
     def __attrs_post_init__(self) -> None:
         self.futures: list[tuple[asyncio.Future[Any], Callable[..., bool]]] = []
-
         self.listeners: list[Listener] = []
         self.collectors: list[Collector] = []
-        self.temp: list[Listener] = []
 
     def __str__(self) -> str:
         return self.name
+
+    def dispatch(self, *payload: Any, **kwargs: Any) -> list[asyncio.Task[Any]]:
+        tasks: list[asyncio.Task[Any]] = []
+        client: GatewayClient = kwargs["client"]
+
+        futures = self.futures[:]
+        collectors = self.collectors[:]
+        listeners = self.listeners[:]
+
+        for index, listener in enumerate(listeners):
+            if not listener.check(*payload):
+                continue
+
+            partial = functools.partial(listener)
+            if listener.in_class:
+                partial = functools.partial(listener, client)
+
+            tasks.append(client.loop.create_task(partial(*payload)))
+
+            if listener.once is True:
+                self.listeners.pop(index)
+
+        for index, (future, check) in enumerate(futures):
+            if not check(*payload):
+                continue
+
+            payload = payload[0] if len(payload) == 1 else payload
+            future.set_result(payload)
+            self.futures.pop(index)
+
+        for index, collector in enumerate(collectors):
+            if not collector.check(*payload):
+                continue
+
+            cls = client if collector.in_class else None
+            tasks.append(
+                client.loop.create_task(collector.dispatch(*payload, client=cls))
+            )
+
+        return tasks
 
     def subscribe(self, func: Callback, **kwargs: Any) -> Listener | Collector:
         """Subscribes a callback to an :class:`.Event`
@@ -163,6 +208,9 @@ class Event(Generic[T]):
         check: Callable[..., bool]
             A check the event has to pass in order to dispatch.
 
+        timeout: :class:`datetime.timedelta`
+            A timeout for collectors.
+
         Raises
         ------
         :exc:`TypeError`
@@ -174,26 +222,34 @@ class Event(Generic[T]):
             The created listener or collector.
         """
         check: Check = kwargs.get("check") or (lambda *_: True)
+        timeout = kwargs.get("timeout") or timedelta.max
         in_class = "self" in inspect.signature(func).parameters
 
         if amount := kwargs.get("amount"):
             collector = Collector(
-                func, check, asyncio.Queue[Any](maxsize=amount), in_class=in_class
+                func,
+                check,
+                asyncio.Queue[Any](maxsize=amount),
+                in_class=in_class,
+                timeout=timeout,
             )
-            self.collectors.append(collector)
 
+            self.collectors.append(collector)
             return collector
 
-        listener = Listener(func, check, in_class=in_class)
-        if kwargs.get("once", False) is not False:
-            self.temp.append(listener)
-            return listener
+        listener = Listener(
+            func, check, in_class=in_class, once=kwargs.get("once", False)
+        )
 
         self.listeners.append(listener)
         return listener
 
     def collect(
-        self, *, amount: int, check: Check = lambda *_: True
+        self,
+        *,
+        amount: int,
+        check: Check = lambda *_: True,
+        timeout: timedelta = timedelta.max,
     ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
@@ -205,13 +261,18 @@ class Event(Generic[T]):
         amount: :class:`int`
             The amount to collect before dispatching.
 
+        once: :class:`bool`
+            If the collector should be dispatched one-time only.
+
         check: Callable[..., bool]
-            The check needed to be valid in order to collect
-            an event.
+            The check needed to be valid in order to collect an event.
+
+        timeout: :class:`datetime.timedelta`
+            A timeout for collectors.
         """
 
         def inner(func: Callback) -> Collector:
-            ret = self.subscribe(func, amount=amount, check=check)
+            ret = self.subscribe(func, amount=amount, check=check, timeout=timeout)
             assert isinstance(ret, Collector)
 
             return ret
@@ -276,16 +337,8 @@ class Event(Generic[T]):
     ) -> Message:
         ...
 
-    @overload
     async def wait(
-        self: Event[Literal["GUILD_MEMBERS_CHUNK"]],
-        timeout: None | float = None,
-        check: Check = lambda *_: True,
-    ) -> list[Member]:
-        ...
-
-    async def wait(
-        self: Event[Any], timeout: None | float = None, check: Check = lambda *_: True
+        self, timeout: None | float = None, check: Check = lambda *_: True
     ) -> Any:
         future = asyncio.get_running_loop().create_future()
         self.futures.append((future, check))
