@@ -38,6 +38,7 @@ implicit_reexport = true
 typeCheckingMode = "strict"
 reportImportCycles = false
 reportPrivateUsage = false
+reportUnnecessaryIsInstance = false
 ignore = ["examples/"]
 
 [tool.isort]
