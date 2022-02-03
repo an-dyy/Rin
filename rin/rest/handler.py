@@ -151,12 +151,11 @@ class RESTClient:
             return self.session
 
         return aiohttp.ClientSession(
-            ws_response_class=RESTClient.GATEWAY_TYPE,
             response_class=RatelimitedClientResponse,
             loop=self.client.loop,
         )
 
-    async def connect(self, url: str) -> Gateway:
+    async def connect(self, url: str) -> aiohttp.ClientWebSocketResponse:
         """Makes a connection to the gateway.
 
         Parameters

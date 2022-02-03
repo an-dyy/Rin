@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import attr
 
+from ...gateway.payloads import GUILD_MEMBERS_CHUNK, format
 from ...rest import Route
-from ...types import ChunkData
 from ..base import Base
 from ..cacheable import Cacheable
 from ..channels import TextChannel
@@ -136,16 +136,8 @@ class Guild(Base, Cacheable):
         user_ids: None | int | list[int] = None,
         nonce: None | str = None,
     ) -> None:
-        payload: ChunkData = {
-            "op": 8,
-            "d": {
-                "guild_id": self.id,
-                "query": query,
-                "limit": limit,
-                "presences": presences,
-                "user_ids": user_ids,
-                "nonce": nonce,
-            },
-        }
-
-        await self.client.gateway.send(payload)
+        await self.client.gateway(
+            format(
+                GUILD_MEMBERS_CHUNK, self.id, query, limit, presences, user_ids, nonce
+            )
+        )

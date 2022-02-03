@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import signal
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
@@ -11,7 +10,7 @@ import attr
 
 from .gateway import Collector, Event, Gateway, Listener
 from .models import Intents, User
-from .rest import RESTClient, Route
+from .rest import RESTClient
 from .utils import ensure_loop
 
 if TYPE_CHECKING:
@@ -21,7 +20,6 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 __all__ = ("GatewayClient",)
-_log = logging.getLogger(__name__)
 
 
 @attr.s(slots=True)
@@ -76,36 +74,32 @@ class GatewayClient:
 
     def __attrs_post_init__(self) -> None:
         self.rest = RESTClient(self.token, self)
+        self.gateway = Gateway(self)
 
-    async def start(self, reconnect: bool = False) -> None:
+    async def start(self) -> None:
         """Starts the connection.
 
         This method starts the connection to the gateway.
         """
-        route = Route("gateway/bot")
-
-        if reconnect is not True and self.loop is None:
+        if self.loop is None:
             self.loop = ensure_loop()
+            self.gateway.loop = self.loop
 
         async def runner() -> None:
             if self.closed is True:
                 return None
 
-            data = await self.rest.request("GET", route)
-            self.gateway = await self.rest.connect(data["url"])
-            self.gateway._closed = False
-
-            await self.gateway.start(self)
+            await self.gateway.start()
 
         def handle() -> None:
-            self.loop.create_task(self.close("Received signal to terminate."))
+            self.loop.create_task(self.close())
 
         self.loop.add_signal_handler(signal.SIGTERM, handle)
         self.loop.add_signal_handler(signal.SIGINT, handle)
 
         await runner()
 
-    async def close(self, reason: str = "None") -> None:
+    async def close(self) -> None:
         """Closes the client.
 
         This method closes the gateway connection as
@@ -116,12 +110,11 @@ class GatewayClient:
         reason: :class:`str`
             The reason to close the client with.
         """
-        _log.debug("CLOSING CLIENT")
-        session: aiohttp.ClientSession = self.rest.session
         self.closed = True
+        session: aiohttp.ClientSession = self.rest.session
 
         await session.close()
-        await self.gateway.close(reason=reason)
+        await self.gateway.close()
 
     def unserialize(self, data: dict[Any, Any], *, cls: type[T]) -> T:
         """Un-serializes a serialized object. Used for persistent objects.
