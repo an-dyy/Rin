@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
+from ...rest import Route
 from ..base import Base
 from ..cacheable import Cacheable
 from ..user import User
@@ -49,6 +50,36 @@ class Member(Base, Cacheable):
 
     def __str__(self) -> str:
         return f"{self.username}#{self.discriminator}"
+
+    async def ban(self, delete_days: int = 0) -> None:
+        """Bans a member from the guild.
+
+        Parameters
+        ----------
+        delete_days: :class:`int`
+            The amount of days of messages to delete from the user.
+
+        Raises
+        ------
+        :exc:`.HTTPEXception`
+            Something went wrong.
+        """
+        route = Route(f"guilds/{self.guild.id}/bans/{self.id}", guild_id=self.guild.id)
+
+        await self.client.rest.request(
+            "PUT", route, json={"delete_message_days": delete_days}
+        )
+
+    async def unban(self) -> None:
+        """Unbans a member from the guild.
+
+        Raises
+        ------
+        :exc:`.HTTPEXception`
+            Something went wrong.
+        """
+        route = Route(f"guilds/{self.guild.id}/bans/{self.id}", guild_id=self.guild.id)
+        await self.client.rest.request("DELETE", route)
 
     @property
     def mention(self) -> str:

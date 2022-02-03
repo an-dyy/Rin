@@ -41,6 +41,9 @@ class Parser:
         if guild := Guild.cache.get(int(data["guild_id"])):
             guild.members = members
 
+            for member in members:
+                member.guild = guild
+
         self.dispatch(Events.GUILD_MEMBERS_CHUNK, members)
 
     async def parse_message_create(self, data: dict[Any, Any]) -> None:

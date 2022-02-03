@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import attr
 
+from ...rest import Route
 from ...types import ChunkData
 from ..base import Base
 from ..cacheable import Cacheable
 from ..channels import TextChannel
+from ..snowflake import Snowflake
 from .member import Member
 
 if TYPE_CHECKING:
@@ -87,6 +89,44 @@ class Guild(Base, Cacheable):
         for member in self.members:
             Member.cache.set(member.id, member)
             member.guild = self
+
+    async def ban(self, user: Snowflake, delete_days: int = 0) -> None:
+        """Bans a member from the guild.
+
+        Parameters
+        ----------
+        user: :class:`.Snowflake`
+            The user to ban from the guild.
+
+        delete_days: :class:`int`
+            The amount of days of messages to delete from the user.
+
+        Raises
+        ------
+        :exc:`.HTTPEXception`
+            Something went wrong.
+        """
+        route = Route(f"guilds/{self.id}/bans/{user.id}", guild_id=self.id)
+
+        await self.client.rest.request(
+            "PUT", route, json={"delete_message_days": delete_days}
+        )
+
+    async def unban(self, user: Snowflake) -> None:
+        """Unbans a member from the guild.
+
+        Parameters
+        ----------
+        user: :class:`.Snowflake`
+            The user to unban from the guild.
+
+        Raises
+        ------
+        :exc:`.HTTPEXception`
+            Something went wrong.
+        """
+        route = Route(f"guilds/{self.id}/bans/{user.id}", guild_id=self.id)
+        await self.client.rest.request("DELETE", route)
 
     async def chunk(
         self,
