@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import attr
 
-from ..cacheable import Cacheable
+from ..cacheable import Cache, Cacheable
 from .types import ButtonStyle, ComponentType
 
 if TYPE_CHECKING:
@@ -16,6 +16,7 @@ __all__ = ("ActionRow", "Button", "button", "Component")
 
 class Component(Cacheable):
     custom_id: str
+    cache: Cache[Button]
 
     def to_dict(self) -> dict[Any, Any]:
         raise NotImplementedError
@@ -25,7 +26,7 @@ class Component(Cacheable):
 
 
 @attr.s(slots=True)
-class ActionRow(Component):
+class ActionRow:
     children: list[Button] = attr.field()
 
     def to_dict(self) -> dict[Any, Any]:
@@ -36,7 +37,7 @@ class ActionRow(Component):
 
 
 @attr.s(slots=True)
-class Button(Component):
+class Button:
     style: ButtonStyle = attr.field()
     label: str = attr.field()
     custom_id: str = attr.field(default=uuid.uuid4().hex)
@@ -46,10 +47,10 @@ class Button(Component):
     url: None | str = attr.field(default=None)
 
     type: int = attr.field(init=False, default=2)
+    callback: Callable[..., Any] = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         Component.cache.set(self.custom_id, self)
-        Button.cache.set(self.custom_id, self)
 
     def to_dict(self) -> dict[Any, Any]:
         payload = {
@@ -68,30 +69,32 @@ class Button(Component):
 
         return payload
 
-    async def callback(self, interaction: Interaction, button: Button) -> None:
-        raise NotImplementedError
-
 
 def button(
-    style: ButtonStyle,
     label: str,
-    *,
-    custom_id: None | str = None,
+    style: ButtonStyle,
+    custom_id: str = uuid.uuid4().hex,
     disabled: bool = False,
     emoji: None | str = None,
-    url: None | str = None
+    url: None | str = None,
 ) -> Callable[..., Button]:
+    """Creates a button.
+
+    Uses the decorated function as the button's callback.
+    This function should take two arguments, :class:`.Interaction` and :class:`.Button`
+
+    Examples
+    --------
+    .. code:: python
+        @button("Foo!", rin.ButtonStyle.PRIMARY)
+        async def callback(interaction: Interaction, button: Button) -> None:
+            await interaction.send("Bar!")
+    """
+
     def inner(func: Callable[..., Any]) -> Button:
-        nonlocal custom_id
-
-        if custom_id is None:
-            custom_id = uuid.uuid4().hex
-
-        button = Button(
-            style, label, custom_id=custom_id, disabled=disabled, emoji=emoji, url=url
-        )
-
+        button = Button(style, label, custom_id, disabled, emoji, url)
         button.callback = func
+
         return button
 
     return inner
