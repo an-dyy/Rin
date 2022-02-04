@@ -46,8 +46,6 @@ class PartialSender:
             "components": [row.to_dict() for row in rows],
         }
 
-        print(payload["components"])
-
         if allowed_mentions is not None:
             payload["allowed_mentions"] = allowed_mentions.to_dict()
 
