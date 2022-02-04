@@ -29,21 +29,23 @@ class WSMessage(NamedTuple):
 
 @attr.s(slots=True)
 class Gateway:
-    client: GatewayClient = attr.field()
-    intents: Intents = attr.field(init=False)
-    loop: asyncio.AbstractEventLoop = attr.field(init=False)
+    client: GatewayClient = attr.field(repr=False)
+    intents: Intents = attr.field(init=False, repr=False)
+    loop: asyncio.AbstractEventLoop = attr.field(init=False, repr=False)
 
-    parser: Parser = attr.field(init=False)
-    ratelimiter: Ratelimiter = attr.field(init=False, default=Ratelimiter(2, 1))
+    parser: Parser = attr.field(init=False, repr=False)
+    ratelimiter: Ratelimiter = attr.field(
+        init=False, default=Ratelimiter(2, 1), repr=False
+    )
 
-    interval: float = attr.field(init=False, default=0)
-    pacemaker: asyncio.Task[None] = attr.field(init=False)
+    interval: float = attr.field(init=False, default=0, repr=False)
+    pacemaker: asyncio.Task[None] = attr.field(init=False, repr=False)
 
-    session: str = attr.field(init=False, default="")
-    sequence: int = attr.field(init=False, default=0)
+    session: str = attr.field(init=False, default="", repr=True)
+    sequence: int = attr.field(init=False, default=0, repr=True)
 
-    sock: aiohttp.ClientWebSocketResponse = attr.field(init=False)
-    callbacks: dict[OPCode, Callable[..., Any]] = attr.field(init=False)
+    sock: aiohttp.ClientWebSocketResponse = attr.field(init=False, repr=False)
+    callbacks: dict[OPCode, Callable[..., Any]] = attr.field(init=False, repr=False)
 
     def __attrs_post_init__(self) -> None:
         self.parser = Parser(self.client)
@@ -72,7 +74,7 @@ class Gateway:
             self.interval = data["d"]["heartbeat_interval"]
             self.pacemaker = self.loop.create_task(self.pulse())
 
-            await self.send(IDENTIFY, self.client.token, self.intents.value)
+            await self(format(IDENTIFY, self.client.token, self.intents.value))
             await self.read()
 
     async def close(self) -> None:
@@ -94,8 +96,11 @@ class Gateway:
             if sequence := data.get("s"):
                 self.sequence = sequence
 
-            if callback := self.callbacks.get(code):
+            if callback := self.callbacks.get(OPCode(code)):
                 await callback(data)
+
+            if code == OPCode.HEARTBEAT_ACK:
+                _log.debug("GATEWAY ACK'D HEARTBEAT.")
 
     async def dispatch(self, data: dict[Any, Any]) -> asyncio.Task[Any]:
         event = getattr(Events, data["t"])
@@ -123,12 +128,11 @@ class Gateway:
 
         await self.start()
 
-    async def send(self, payload: PayloadData, *args: Any) -> None:
+    async def send(self, payload: PayloadData) -> None:
         async with self.ratelimiter:
-            payload = format(payload, *args)
-            await self.sock.send_json(payload)
+            _log.debug(f"SENDING GATEWAY: {payload}")
 
-        _log.debug(f"SENT GATEWAY: {payload}")
+            await self.sock.send_json(payload)
 
     async def pulse(self) -> None:
         while not self.sock.closed:

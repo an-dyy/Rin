@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import enum
 import sys
 from typing import Any
@@ -31,7 +32,7 @@ class OPCode(enum.IntFlag):
 
 
 IDENTIFY: IdentifyData = {
-    "op": OPCode.IDENTIFY,
+    "op": int(OPCode.IDENTIFY),
     "d": {
         "token": "{0}",
         "intents": "{1}",
@@ -44,14 +45,14 @@ IDENTIFY: IdentifyData = {
 }
 
 RESUME: ResumeData = {
-    "op": OPCode.RESUME,
+    "op": int(OPCode.RESUME),
     "d": {"token": "{0}", "session_id": "{1}", "seq": "{2}"},
 }
 
-HEARTBEAT: HeartbeatData = {"op": OPCode.HEARTBEAT, "d": "{0}"}
+HEARTBEAT: HeartbeatData = {"op": int(OPCode.HEARTBEAT), "d": "{0}"}
 
 GUILD_MEMBERS_CHUNK: ChunkData = {
-    "op": OPCode.REQUEST_GUILD_MEMBERS,
+    "op": int(OPCode.REQUEST_GUILD_MEMBERS),
     "d": {
         "guild_id": "{0}",
         "query": "{1}",
@@ -64,21 +65,25 @@ GUILD_MEMBERS_CHUNK: ChunkData = {
 
 
 def format(payload: PayloadData, *args: Any) -> PayloadData:
-    payload = payload.copy()
-    for key, value in payload.items():  # type: ignore
+    data = copy.deepcopy(payload)
+    index = 0
 
+    for key, value in data.items():
         if isinstance(value, str) and value.startswith("{") and value.endswith("}"):
-            payload[key] = value.format(*args)
+            data[key] = args[index]
+            index += 1
 
-        if isinstance(value, dict):
-            value: dict[Any, Any]
+        elif isinstance(value, dict):
+            _data: dict[Any, Any] = value
 
-            for _key, _value in value.items():
+            for _key, _value in _data.items():
+
                 if (
                     isinstance(_value, str)
                     and _value.startswith("{")
                     and _value.endswith("}")
                 ):
-                    payload[key][_key] = _value.format(*args)
+                    data[key][_key] = args[index]
+                    index += 1
 
-    return payload
+    return data
