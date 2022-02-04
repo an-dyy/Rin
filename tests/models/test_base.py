@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import unittest
-
 import attr
-
+import pytest
 import rin
 
 
-class TestCache(unittest.TestCase):
-    # pyright: reportUnnecessaryIsInstance=false
-    """Test :class:`.Base`"""
+class TestBase:
+    @pytest.fixture()
+    def client(self) -> rin.GatewayClient:
+        return rin.GatewayClient("DISCORD_TOKEN")
 
-    def setUp(self) -> None:
-        self.client = rin.GatewayClient("DISCORD_TOKEN")
-
-    def test_attributes(self) -> None:
+    def test_attributes(self, client: rin.GatewayClient) -> None:
         @attr.s()
         class TestBase(rin.Base):
             id: int = rin.Base.field(cls=int)
@@ -22,39 +18,35 @@ class TestCache(unittest.TestCase):
             optional: None = rin.Base.field()
 
         test = TestBase(
-            self.client, {"id": "123", "username": "test", "optional": None}
+            client, {"id": "123", "username": "test", "optional": None},
         )
 
-        self.assertIsInstance(test.id, int)
-        self.assertIsInstance(test.username, str)
-        self.assertIsNone(test.optional)
+        assert isinstance(test.id, int)
+        assert isinstance(test.username, str)
+        assert test.optional is None
 
-        self.assertEqual(test.id, 123)
-        self.assertEqual(test.username, "test")
+        assert test.id == 123
+        assert test.username == "test"
 
-    def test_aliases(self) -> None:
+    def test_aliases(self, client: rin.GatewayClient) -> None:
         @attr.s()
         class TestBase(rin.Base):
-            alias: str = rin.Base.field(key="something")
+            alias: str = rin.Base.field(key="foo")
 
-        test = TestBase(self.client, {"something": "something else"})
+        test = TestBase(client, data={"foo": "bar"})
+        assert test.alias is not None and test.alias == "bar"
 
-        self.assertIsInstance(test.alias, str)
-        self.assertEqual(test.alias, "something else")
-
-    def test_default(self) -> None:
+    def test_default(self, client: rin.GatewayClient) -> None:
         @attr.s()
         class TestBase(rin.Base):
             none: None = rin.Base.field()
             defaulted: int = rin.Base.field(default=0)
 
-        test = TestBase(self.client, {})
+        test = TestBase(client, {})
+        assert test.none is None
+        assert test.defaulted is not None and test.defaulted == 0
 
-        self.assertIsNone(test.none)
-        self.assertIsInstance(test.defaulted, int)
-        self.assertEqual(test.defaulted, 0)
-
-    def test_has_client(self) -> None:
+    def test_has_client(self, client: rin.GatewayClient) -> None:
         class Item:
             def __init__(self, client: rin.GatewayClient, username: str) -> None:
                 self.username = username
@@ -64,12 +56,11 @@ class TestCache(unittest.TestCase):
         class TestBase(rin.Base):
             item: Item = rin.Base.field(cls=Item, has_client=True)
 
-        test = TestBase(self.client, {"item": "test"})
+        test = TestBase(client, {"item": "test"})
+        assert test.item is not None and isinstance(test.item, Item)
+        assert test.client is not None and isinstance(test.client, rin.GatewayClient)
 
-        self.assertIsInstance(test.item, Item)
-        self.assertTrue(hasattr(test.item, "client"))
-
-    def test_lists(self) -> None:
+    def test_lists(self, client: rin.GatewayClient) -> None:
         class Item:
             def __init__(self, username: str) -> None:
                 self.username = username
@@ -78,19 +69,19 @@ class TestCache(unittest.TestCase):
         class TestBase(rin.Base):
             items: list[Item] = rin.Base.field(cls=Item)
 
-        test = TestBase(self.client, {"items": ["1", "2", "3"]})
+        test = TestBase(client, {"items": ["1", "2", "3"]})
 
-        self.assertIsInstance(test.items, list)
-        self.assertTrue(all([isinstance(item, Item) for item in test.items]))
+        assert isinstance(test.items, list)
+        assert all([isinstance(item, Item) for item in test.items])
 
-    def test_cacheable(self) -> None:
+    def test_cacheable(self, client: rin.GatewayClient) -> None:
         @attr.s()
         class TestBase(rin.Base, rin.Cacheable):
             id: int = rin.Base.field(cls=int)
 
-        test = TestBase(self.client, {"id": "123"})
+        test = TestBase(client, {"id": "123"})
 
-        self.assertTrue(hasattr(TestBase, "cache"))
-        self.assertIsNotNone(TestBase.cache.get(123))
-        self.assertIs(TestBase.cache.get(123), test)
-        self.assertIsInstance(TestBase.cache.get(123), TestBase)
+        assert hasattr(TestBase, "cache")
+        assert TestBase.cache.get(123) is not None
+        assert TestBase.cache.get(123) is test
+        assert isinstance(TestBase.cache.get(123), TestBase)

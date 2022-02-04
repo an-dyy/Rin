@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import unittest
-
+import pytest
 import rin
 
 
@@ -10,28 +9,30 @@ class FakeMessage(rin.Cacheable, max=5):
         self.id = id
 
 
-class TestCache(unittest.TestCase):
-    """Test :class:`.Cache` and :class:`.Cacheable`"""
+class TestCache:
+    def test_attributes(self) -> None:
+        assert hasattr(FakeMessage, "cache")
+        assert hasattr(FakeMessage, "__cache__")
 
-    def test_cache(self) -> None:
-        self.assertTrue(hasattr(FakeMessage, "cache"))
-        self.assertFalse(hasattr(FakeMessage(1), "cache"))
-        self.assertIsInstance(FakeMessage.cache, rin.Cache)
+        assert not hasattr(FakeMessage(1), "cache")
+        assert hasattr(FakeMessage(1), "__cache__")
+
+        assert isinstance(FakeMessage.cache, rin.Cache)
 
     def test_cache_max(self) -> None:
-        self.assertEqual(FakeMessage.cache.max, 5)
+        assert FakeMessage.cache.max == 5
 
         for i in range(6):
             FakeMessage.cache.set(i, FakeMessage(i))
 
-        self.assertEqual(FakeMessage.cache.len, 5)
+        assert FakeMessage.cache.len == 5
 
     def test_cache_set(self) -> None:
         to_cache = FakeMessage(7)
         FakeMessage.cache.set(7, to_cache)
 
-        self.assertEqual(FakeMessage.cache.len, 5)
-        self.assertIs(FakeMessage.cache.get(7), to_cache)
+        assert FakeMessage.cache.len, 5
+        assert FakeMessage.cache.get(7) is to_cache
 
     def test_cache_get(self) -> None:
         for i in range(6):
@@ -39,5 +40,5 @@ class TestCache(unittest.TestCase):
 
         cached = FakeMessage.cache.get(1)
 
-        self.assertIsNotNone(cached)
-        self.assertIs(cached.id, 1)  # type: ignore
+        assert cached is not None
+        assert cached.id == 1
