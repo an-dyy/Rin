@@ -2,7 +2,8 @@
     <h1>Rin</h1>
     <p>
         <a href="https://rin.readthedocs.io/en/latest/"><img src="https://img.shields.io/readthedocs/rin"</img></a>
-           <a href="https://pypi.org/project/rin/"><img src="https://img.shields.io/pypi/dm/rin"</img></a>
+        <a href="https://pypi.org/project/rin/"><img src="https://img.shields.io/pypi/dm/rin"</img></a>
+        <a href="https://codecov.io/gh/an-dyy/Rin"><img src="https://codecov.io/gh/an-dyy/Rin/branch/master/graph/badge.svg?token=G0UG26MRYO"/></a>
         <a href="https://discord.com/invite/QPFXzFbqrK"><img src="https://img.shields.io/discord/907106240537169980?label=discord"</img></a>
         <a href="https://github.com/an-dyy/Rin/releases"><img src="https://img.shields.io/github/v/release/an-dyy/rin?include_prereleases&sort=semver"</img></a>
     </p>
