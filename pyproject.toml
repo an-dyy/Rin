@@ -39,6 +39,7 @@ typeCheckingMode = "strict"
 reportImportCycles = false
 reportPrivateUsage = false
 reportUnnecessaryIsInstance = false
+reportIncompatibleMethodOverride = false
 ignore = ["examples/"]
 
 [tool.isort]

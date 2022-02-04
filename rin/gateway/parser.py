@@ -4,7 +4,16 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import Guild, Member, Message, TextChannel, User
+from ..models import (
+    Component,
+    Guild,
+    Interaction,
+    InteractionType,
+    Member,
+    Message,
+    TextChannel,
+    User,
+)
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -17,6 +26,15 @@ class Parser:
 
     async def no_parse(self, event: Event[Any], data: dict[Any, Any]) -> None:
         self.client.dispatch(event, data)
+
+    async def parse_interaction_create(self, data: dict[Any, Any]) -> None:
+        interaction = Interaction(self.client, data)
+
+        if interaction.type is InteractionType.COMPONENT:
+            if component := Component.cache.get(data["data"]["custom_id"]):
+                await component.callback(interaction, component)
+
+        self.client.dispatch(Events.INTERACTION_CREATE, interaction)
 
     async def parse_ready(self, data: dict[Any, Any]) -> None:
         user = User(self.client, data["user"])

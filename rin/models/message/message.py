@@ -16,6 +16,7 @@ from .partial import PartialSender
 if TYPE_CHECKING:
     from ..builders import EmbedBuilder
     from ..guild import Guild
+    from .components import ActionRow
     from .mentions import AllowedMentions
 
 __all__ = ("Message",)
@@ -97,6 +98,7 @@ class Message(Base, Cacheable, max=1000):
         embed: None | EmbedBuilder = None,
         embeds: list[EmbedBuilder] = [],
         allowed_mentions: None | AllowedMentions = None,
+        rows: list[ActionRow] = [],
     ) -> Message:
         """Replies to the message.
 
@@ -117,6 +119,9 @@ class Message(Base, Cacheable, max=1000):
         allowed_mentions: None | :class:`.AllowedMentions`
             The allowed mentions of the reply.
 
+        rows: :class:`list`
+            A list of :class:`.ActionRow`s to use when sending.
+
         Raises
         ------
         :exc:`.HTTPException`
@@ -136,6 +141,7 @@ class Message(Base, Cacheable, max=1000):
             embed=embed,
             embeds=embeds,
             allowed_mentions=allowed_mentions,
+            rows=rows,
         )
 
     async def delete(self) -> None:

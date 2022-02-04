@@ -35,7 +35,7 @@ class Base:
     def field(
         *,
         key: None | str = None,
-        cls: type[Any] = str,
+        cls: None | type[Any] = str,
         has_client: bool = False,
         **kwargs: Any,
     ) -> Any:
@@ -62,7 +62,7 @@ class Base:
             Extra options to pass when calling :meth:`attr.field`.
         """
         return attr.field(
-            init=False,
+            init=kwargs.pop("init", False),
             default=kwargs.pop("default", None),
             repr=kwargs.pop("repr", False),
             metadata={
@@ -92,6 +92,10 @@ class Base:
 
             if value is None:
                 setattr(self, attribute.name, attribute.default)
+                continue
+
+            if class_type is None:
+                setattr(self, attribute.name, value)
                 continue
 
             construct = (
