@@ -86,6 +86,7 @@ def button(
     Examples
     --------
     .. code:: python
+
         @button("Foo!", rin.ButtonStyle.PRIMARY)
         async def callback(interaction: Interaction, button: Button) -> None:
             await interaction.send("Bar!")

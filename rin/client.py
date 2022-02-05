@@ -145,6 +145,7 @@ class GatewayClient:
         Examples
         --------
         .. code:: python
+
             client.dispatch(rin.Events.MESSAGE_CREATE, rin.Message(...))
             # Here `rin.Message(...)` is the payload that gets dispatched to the event's callback.
 
