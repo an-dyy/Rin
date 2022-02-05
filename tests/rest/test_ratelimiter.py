@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-import aiohttp
 import pytest
 import rin
 
