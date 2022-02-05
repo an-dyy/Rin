@@ -6,20 +6,39 @@ from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 
 import aiohttp
 import attr
+import enum
 
 from ..rest import Route
 from .event import Events
 from .parser import Parser
-from .payloads import HEARTBEAT, IDENTIFY, RESUME, OPCode, format
 from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
     from ..models import Intents
-    from ..types import PayloadData
+    from ..typings import (
+        DispatchPayload,
+        IdentifyPayload,
+        ResumePayload,
+        HeartbeatPayload,
+    )
 
 __all__ = ("Gateway",)
 _log = logging.getLogger(__name__)
+
+
+class OPCode(enum.IntFlag):
+    DISPATCH = 0
+    HEARTBEAT = 1
+    IDENTIFY = 2
+    PRESENCE_UPDATE = 3
+    VOICE_STATE_UPDATE = 4
+    RESUME = 6
+    RECONNECT = 7
+    REQUEST_GUILD_MEMBERS = 8
+    INVALID_SESSION = 9
+    HELLO = 10
+    HEARTBEAT_ACK = 11
 
 
 class WSMessage(NamedTuple):
@@ -54,11 +73,11 @@ class Gateway:
 
         self.callbacks = {
             OPCode.DISPATCH: self.dispatch,
-            OPCode.RESUME: self.resume,
-            OPCode.RECONNECT: self.reconnect,
+            OPCode.RESUME: self.send_resume,
+            OPCode.RECONNECT: self.send_reconnect,
         }
 
-    async def __call__(self, payload: PayloadData) -> None:
+    async def __call__(self, payload: DispatchPayload) -> None:
         await self.send(payload)
 
     async def start(self) -> None:
@@ -74,7 +93,7 @@ class Gateway:
             self.interval = data["d"]["heartbeat_interval"]
             self.pacemaker = self.loop.create_task(self.pulse())
 
-            await self(format(IDENTIFY, self.client.token, self.intents.value))
+            await self(self.identify)
             await self.read()
 
     async def close(self) -> None:
@@ -117,18 +136,18 @@ class Gateway:
 
         return self.loop.create_task(self.parser.no_parse(event, data["d"]))
 
-    async def resume(self, _: dict[Any, Any]) -> None:
+    async def send_resume(self, _: dict[Any, Any]) -> None:
         _log.debug("GATEWAY SENT RESUME.")
-        await self(format(RESUME, self.client.token, self.sequence))
+        await self(self.resume)
 
-    async def reconnect(self, _: dict[Any, Any]) -> None:
+    async def send_reconnect(self, _: dict[Any, Any]) -> None:
         _log.debug("GATEWAY SENT RECONNECT.")
         if not self.sock.closed:
             await self.sock.close()
 
         await self.start()
 
-    async def send(self, payload: PayloadData) -> None:
+    async def send(self, payload: DispatchPayload) -> None:
         async with self.ratelimiter:
             _log.debug(f"SENDING GATEWAY: {payload}")
 
@@ -137,7 +156,37 @@ class Gateway:
     async def pulse(self) -> None:
         while not self.sock.closed:
 
-            await self(format(HEARTBEAT, self.sequence))
+            await self(self.heartbeat)
             self.sequence += 1
 
             await asyncio.sleep(self.interval / 1000)
+
+    @property
+    def identify(self) -> IdentifyPayload:
+        return {
+            "op": 2,
+            "d": {
+                "token": self.client.token,
+                "intents": self.intents.value,
+                "properties": {
+                    "$os": "",
+                    "$browser": "Rin 0.1.0-alpha",
+                    "$device": "Rin 0.1.0-alpha",
+                },
+            },
+        }
+
+    @property
+    def resume(self) -> ResumePayload:
+        return {
+            "op": 6,
+            "d": {
+                "token": self.client.token,
+                "session_id": self.session,
+                "seq": self.sequence,
+            },
+        }
+
+    @property
+    def heartbeat(self) -> HeartbeatPayload:
+        return {"op": 1, "d": self.sequence}

@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import attr
 
-from ...gateway.payloads import GUILD_MEMBERS_CHUNK, format
 from ...rest import Route
 from ..base import Base
 from ..cacheable import Cacheable
@@ -12,7 +11,10 @@ from ..channels import TextChannel
 from ..snowflake import Snowflake
 from .member import Member
 
+
 if TYPE_CHECKING:
+    from ...typings import ChunkPayload
+
     Check = Callable[..., bool]
 
 text_check: Check = lambda c: c["type"] == 0
@@ -133,11 +135,19 @@ class Guild(Base, Cacheable):
         query: str = "",
         limit: int = 0,
         presences: bool = False,
-        user_ids: None | int | list[int] = None,
+        user_ids: int | list[int] = [],
         nonce: None | str = None,
     ) -> None:
-        await self.client.gateway(
-            format(
-                GUILD_MEMBERS_CHUNK, self.id, query, limit, presences, user_ids, nonce
-            )
-        )
+        payload: ChunkPayload = {
+            "op": 8,
+            "d": {
+                "guild_id": self.id,
+                "query": query,
+                "limit": limit,
+                "presences": presences,
+                "user_ids": user_ids,
+                "nonce": nonce,
+            },
+        }
+
+        await self.client.gateway.send(payload)
