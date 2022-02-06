@@ -11,7 +11,6 @@ from ..channels import TextChannel
 from ..snowflake import Snowflake
 from .member import Member
 
-
 if TYPE_CHECKING:
     from ...typings import ChunkPayload
 

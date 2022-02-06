@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any
 import attr
 
 from ..models import (
-    Component,
+    ComponentCache,
+    ComponentType,
     Guild,
     Interaction,
     InteractionType,
@@ -31,7 +32,11 @@ class Parser:
         interaction = Interaction(self.client, data)
 
         if interaction.type is InteractionType.COMPONENT:
-            if component := Component.cache.get(data["data"]["custom_id"]):
+            if component := ComponentCache.cache.get(data["data"]["custom_id"]):
+
+                if component.type is ComponentType.SELECTMENU:
+                    component.values = interaction.data["data"]["values"]
+
                 await component.callback(interaction, component)
 
         self.client.dispatch(Events.INTERACTION_CREATE, interaction)

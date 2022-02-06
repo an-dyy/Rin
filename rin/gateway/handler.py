@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import enum
 import logging
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 
 import aiohttp
 import attr
-import enum
 
 from ..rest import Route
 from .event import Events
@@ -18,9 +18,9 @@ if TYPE_CHECKING:
     from ..models import Intents
     from ..typings import (
         DispatchPayload,
+        HeartbeatPayload,
         IdentifyPayload,
         ResumePayload,
-        HeartbeatPayload,
     )
 
 __all__ = ("Gateway",)

@@ -10,7 +10,7 @@ from .mentions import AllowedMentions
 
 if TYPE_CHECKING:
     from ...client import GatewayClient
-    from .components import ActionRow
+    from .components import ActionRowBuilder
     from .message import Message
 
 __all__ = ("PartialSender",)
@@ -29,7 +29,7 @@ class PartialSender:
         embeds: list[EmbedBuilder] = [],
         reply: None | Message = None,
         allowed_mentions: None | AllowedMentions = None,
-        rows: list[ActionRow] = [],
+        rows: list[ActionRowBuilder] = [],
     ) -> Message:
         route = Route(f"channels/{self.snowflake}/messages", channel_id=self.snowflake)
 
@@ -43,8 +43,10 @@ class PartialSender:
             "content": content,
             "tts": tts,
             "embeds": [embed.to_dict() for embed in embeds],
-            "components": [row.to_dict() for row in rows],
+            "components": [row.build() for row in rows],
         }
+
+        print(payload["components"])
 
         if allowed_mentions is not None:
             payload["allowed_mentions"] = allowed_mentions.to_dict()

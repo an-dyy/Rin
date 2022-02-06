@@ -18,7 +18,8 @@ class TestBase:
             optional: None = rin.Base.field()
 
         test = TestBase(
-            client, {"id": "123", "username": "test", "optional": None},
+            client,
+            {"id": "123", "username": "test", "optional": None},
         )
 
         assert isinstance(test.id, int)
