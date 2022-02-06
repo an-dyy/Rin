@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
-import types
-
 import asyncio
+import types
+from typing import Any
+from unittest import mock
 
 import pytest
-import rin
 
-from unittest import mock
+import rin
 
 
 class TestGatewayClient:

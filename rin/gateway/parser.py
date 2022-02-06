@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import attr
 
@@ -12,6 +12,7 @@ from ..models import (
     InteractionType,
     Member,
     Message,
+    SelectMenuBuilder,
     TextChannel,
     User,
 )
@@ -35,8 +36,10 @@ class Parser:
             if component := ComponentCache.cache.get(data["data"]["custom_id"]):
 
                 if component.type is ComponentType.SELECTMENU:
+                    component = cast(SelectMenuBuilder, component)
                     component.values = interaction.data["data"]["values"]
 
+                component = cast(SelectMenuBuilder, component)
                 await component.callback(interaction, component)
 
         self.client.dispatch(Events.INTERACTION_CREATE, interaction)

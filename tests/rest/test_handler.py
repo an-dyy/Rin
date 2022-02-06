@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+from unittest import mock
 
 import aiohttp
 import pytest
-import rin
 
-from unittest import mock
+import rin
 
 
 class TestRESTClient:

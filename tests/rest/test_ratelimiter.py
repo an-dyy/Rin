@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from unittest import mock
 
 import pytest
-import rin
 
-from unittest import mock
+import rin
 
 
 class TestRatelimiter:

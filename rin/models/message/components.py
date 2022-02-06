@@ -23,20 +23,75 @@ __all__ = (
 
 
 class ComponentCache(Cacheable):
-    cache: Cache[Any]
+    """A cache of all the components that are cacheable."""
+
+    cache: Cache[Component]
 
 
 class Component:
+    """A base component class.
+
+    Attributes
+    ----------
+    custom_id: str
+        The custom id of the component.
+
+    type: :class:`.ComponentType`
+        The type of the component
+    """
+
     custom_id: str
     type: ComponentType
-    callback: Callable[..., Coroutine[Any, Any, None]]
+
+    async def callback(self, interaction: Interaction, component: Component) -> None:
+        """The callback of the component. By default does nothing.
+
+        Parameters
+        ----------
+        interaction: :class:`.Interaction`
+            The interaction which triggered the component.
+
+        component: :class:`.Component`
+            The component which was triggered.
+        """
+        raise NotImplementedError
 
     def to_dict(self) -> dict[Any, Any]:
+        """Creates a dict from the component.
+
+        Returns
+        -------
+        :class:`dict`
+            The dict representing the component.
+        """
         raise NotImplementedError
 
 
 @attr.s(slots=True)
 class Button(Component):
+    """Represents a button component.
+
+    Parameters
+    ----------
+    label: :class:`str`
+        The label of the button.
+
+    style: :class:`.ButtonStyle`
+        The style of the button
+
+    custom_id: :class:`str`
+        The custom id of the button.
+
+    disabled: :class:`bool`
+        Whether or not the button should be disabled.
+
+    emoji: None | :class:`str`
+        The emoji to use for the button.
+
+    url: None | :class:`str`
+        The url to use for the button.
+    """
+
     label: str = attr.field()
     style: ButtonStyle = attr.field()
     custom_id: str = attr.field()
@@ -48,6 +103,13 @@ class Button(Component):
     type: ComponentType = attr.field(init=False, default=ComponentType.BUTTON)
 
     def to_dict(self) -> dict[Any, Any]:
+        """Turns the button into a dict.
+
+        Returns
+        -------
+        :class:`dict`
+            The dict representing the button.
+        """
         payload = {
             "style": self.style,
             "type": ComponentType.BUTTON,
@@ -64,12 +126,39 @@ class Button(Component):
 
         return payload
 
-    async def callback(self, interaction: Interaction, button: Component) -> None:
+    async def callback(self, interaction: Interaction, button: Button) -> None:
+        """The callback of the button. By default does nothing
+
+        Parameters
+        ----------
+        interaction: :class:`.Interaction`
+            The interaction which triggered the component.
+
+        button: :class:`.Button`
+            The button which was triggered.
+        """
         raise NotImplementedError
 
 
 @attr.s(slots=True)
 class SelectOption:
+    """Represents a SelectMenu option.
+
+    Parameters
+    ----------
+    label: :class:`str`
+        The label of the option.
+
+    value: :class:`str`
+        The value of the option.
+
+    description: None | :class:`str`
+        The description of the option.
+
+    default: :class:`bool`
+        Whether or not the option should be the default one.
+    """
+
     label: str = attr.field()
     value: str = attr.field()
     description: None | str = attr.field(default=None)
@@ -78,6 +167,13 @@ class SelectOption:
     # TODO: Add emoji
 
     def to_dict(self) -> dict[Any, Any]:
+        """Creates a dict from the option.
+
+        Returns
+        -------
+        :class:`dict`
+            The dict representing the option.
+        """
         payload = {"label": self.label, "value": self.value}
 
         if self.description is not None:
@@ -91,6 +187,29 @@ class SelectOption:
 
 @attr.s(slots=True)
 class SelectMenuBuilder(Component):
+    """Represents a Select Menu.
+
+    Parameters
+    ----------
+    options: :class:`list`
+        A list of :class:`.SelectOption`s to use.
+
+    custom_id: :class:`str`
+        The custom id of the select menu.
+
+    placeholder: None | :class:`str`
+        The placeholder to use for the select menu.
+
+    min_values: :class:`int`
+        The minimum values needed to be selected.
+
+    max_values: :class:`int`
+        The maximum values that can be selected.
+
+    disabled: :class:`bool`
+        Whether or not the select menu should be disabled.
+    """
+
     options: list[SelectOption] = attr.field(default=None)
     custom_id: str = attr.field(default=uuid4().hex)
     placeholder: None | str = attr.field(default=None)
@@ -107,12 +226,28 @@ class SelectMenuBuilder(Component):
         self.values = []
 
     def add(self, *options: SelectOption) -> None:
+        """Adds an option to the menu.
+
+        Parameters
+        ----------
+        options: :class:`.SelectOption`
+            The options to add.
+        """
         self.options.extend(options)
 
     def set(self, *options: SelectOption) -> None:
+        """Sets the options of the menu.
+
+        Parameters
+        ----------
+        options: :class:`.SelectOption`
+            The options to set.
+        """
         self.options = list(options)
 
     def set_callback(self) -> Callable[..., Callable[..., Coroutine[Any, Any, None]]]:
+        """Sets the callback of the select menu."""
+
         def inner(
             func: Callable[..., Coroutine[Any, Any, None]]
         ) -> Callable[..., Coroutine[Any, Any, None]]:
@@ -122,18 +257,55 @@ class SelectMenuBuilder(Component):
         return inner
 
     def option(self, label: str, value: str, **kwargs: Any) -> SelectOption:
-        description = kwargs.get("description")
-        default = kwargs.get("default", False)
+        """Creates a new option to the select menu.
 
-        option = SelectOption(label, value, description, default)
+        Parameters
+        ----------
+        label: :class:`str`
+            The label to give the option.
+
+        value: :class:`str`
+            The value of the option.
+
+        description: None | :class:`str`
+            The description of the option.
+
+        default: :class:`bool`
+            Whether or not the option is the default one.
+
+        Returns
+        -------
+        :class:`.SelectOption`
+            The created select option.
+        """
+        option = SelectOption(
+            label, value, kwargs.get("description"), kwargs.get("default", False)
+        )
         self.add(option)
 
         return option
 
     async def callback(self, interaction: Interaction, menu: SelectMenuBuilder) -> None:
+        """The callback of the select menu. By default does nothing
+
+        Parameters
+        ----------
+        interaction: :class:`.Interaction`
+            The interaction which triggered the component.
+
+        menu: :class:`.SelectMenuBuilder`
+            The button which was triggered.
+        """
         raise NotImplementedError
 
     def to_dict(self) -> dict[Any, Any]:
+        """Creates a dict from the select menu.
+
+        Returns
+        -------
+        :class:`dict`
+            The dict representing the select menu.
+        """
         payload = {
             "type": ComponentType.SELECTMENU,
             "options": [opt.to_dict() for opt in self.options],
