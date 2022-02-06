@@ -9,6 +9,7 @@ from ...rest import Route
 from ..base import Base
 from ..cacheable import Cacheable
 from ..channels import TextChannel
+from ..guild import Member
 from ..snowflake import Snowflake
 from ..user import User
 from .partial import PartialSender
@@ -16,7 +17,7 @@ from .partial import PartialSender
 if TYPE_CHECKING:
     from ..builders import EmbedBuilder
     from ..guild import Guild
-    from .components import ActionRow
+    from .components import ActionRowBuilder
     from .mentions import AllowedMentions
 
 __all__ = ("Message",)
@@ -33,7 +34,7 @@ class Message(Base, Cacheable, max=1000):
 
     user: User = Base.field(cls=User)
     member: dict[Any, Any] = Base.field()
-    author: User | dict[Any, Any] = Base.field()
+    author: User | Member = Base.field()
 
     content: str = Base.field()
     timestamp: datetime = Base.field(constructor=datetime.fromisoformat)
@@ -72,7 +73,11 @@ class Message(Base, Cacheable, max=1000):
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         self.channel = TextChannel.cache[self.channel_id]
-        self.author = self.member or self.user
+        self.author = (
+            Member(self.client, self.data["author"])
+            if self.member
+            else User(self.client, self.data["author"])
+        )
 
     def to_reference(self) -> dict[str, int]:
         """Creates a reference dict from the message.
@@ -98,7 +103,7 @@ class Message(Base, Cacheable, max=1000):
         embed: None | EmbedBuilder = None,
         embeds: list[EmbedBuilder] = [],
         allowed_mentions: None | AllowedMentions = None,
-        rows: list[ActionRow] = [],
+        rows: list[ActionRowBuilder] = [],
     ) -> Message:
         """Replies to the message.
 

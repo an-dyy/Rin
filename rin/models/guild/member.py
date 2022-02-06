@@ -41,12 +41,8 @@ class Member(Base, Cacheable):
     )
 
     def __attrs_post_init__(self) -> None:
+        self.id = int(self.data.get("user", self.data)["id"])
         super().__attrs_post_init__()
-        self.id = self.user.id
-        self.username = self.user.username
-        self.discriminator = self.user.discriminator
-
-        Member.cache[self.id] = self
 
     def __str__(self) -> str:
         return f"{self.username}#{self.discriminator}"
@@ -82,6 +78,14 @@ class Member(Base, Cacheable):
         await self.client.rest.request("DELETE", route)
 
     @property
+    def username(self) -> str:
+        return self.data["user"]["username"]
+
+    @property
+    def discriminator(self) -> str:
+        return self.data["user"]["discriminator"]
+
+    @property
     def mention(self) -> str:
         """The mention string to the user."""
         return f"<@{self.id}>"
@@ -89,19 +93,19 @@ class Member(Base, Cacheable):
     @property
     def bot(self) -> bool:
         """If the user is a bot."""
-        return self.user.data.get("bot", False)
+        return self.data.get("bot", False)
 
     @property
     def system(self) -> bool:
         """If the user is a system user."""
-        return self.user.data.get("system", False)
+        return self.data.get("system", False)
 
     @property
     def mfa_enabled(self) -> bool:
         """If the user has 2fa enabled."""
-        return self.user.data.get("mfa_enabled", False)
+        return self.data.get("mfa_enabled", False)
 
     @property
     def verified(self) -> bool:
         """If the user is verified or not."""
-        return self.user.data.get("verified") or False
+        return self.data.get("verified") or False

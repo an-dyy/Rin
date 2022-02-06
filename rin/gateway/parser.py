@@ -12,6 +12,7 @@ from ..models import (
     InteractionType,
     Member,
     Message,
+    PartialSender,
     SelectMenuBuilder,
     TextChannel,
     User,
@@ -86,3 +87,6 @@ class Parser:
 
     def create_message(self, data: dict[Any, Any]) -> Message:
         return Message(self.client, data)
+
+    def partial_sender(self, id: int) -> PartialSender:
+        return PartialSender(self.client, id)
