@@ -4,6 +4,7 @@ import asyncio
 import enum
 import logging
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
+from datetime import datetime
 
 import aiohttp
 import attr
@@ -59,6 +60,8 @@ class Gateway:
 
     interval: float = attr.field(init=False, default=0, repr=False)
     pacemaker: asyncio.Task[None] = attr.field(init=False, repr=False)
+    last_heartbeat: None | datetime = attr.field(init=False, default=None)
+    latency: float = attr.field(init=False, default=float("inf"))
 
     session: str = attr.field(init=False, default="", repr=True)
     sequence: int = attr.field(init=False, default=0, repr=True)
@@ -119,6 +122,11 @@ class Gateway:
                 await callback(data)
 
             if code == OPCode.HEARTBEAT_ACK:
+                if self.last_heartbeat is not None:
+                    self.latency = (
+                        datetime.now() - self.last_heartbeat
+                    ).total_seconds()
+
                 _log.debug("GATEWAY ACK'D HEARTBEAT.")
 
     async def dispatch(self, data: dict[Any, Any]) -> asyncio.Task[Any]:
@@ -157,6 +165,7 @@ class Gateway:
         while not self.sock.closed:
 
             await self(self.heartbeat)
+            self.last_heartbeat = datetime.now()
             self.sequence += 1
 
             await asyncio.sleep(self.interval / 1000)

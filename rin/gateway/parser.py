@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 import attr
 
 from ..models import (
+    AppCommands,
     ComponentCache,
     ComponentType,
     Guild,
@@ -43,11 +44,19 @@ class Parser:
                 component = cast(SelectMenuBuilder, component)
                 await component.callback(interaction, component)
 
+        if interaction.type is InteractionType.COMMAND:
+            if command := AppCommands.cache.get(data["data"]["name"]):
+                self.client.dispatch(command, interaction)
+
         self.client.dispatch(Events.INTERACTION_CREATE, interaction)
 
     async def parse_ready(self, data: dict[Any, Any]) -> None:
         user = User(self.client, data["user"])
         self.client.user = user
+
+        for command in AppCommands.cache.iterator():
+            command.app_id = user.id if not command.app_id else command.app_id
+            await command.register(self.client)
 
         self.client.dispatch(Events.READY, user)
 
