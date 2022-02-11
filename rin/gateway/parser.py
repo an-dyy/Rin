@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, cast
 import attr
 
 from ..models import (
-    AppCommands,
     ComponentCache,
     ComponentType,
     Guild,

@@ -170,7 +170,7 @@ class GatewayClient:
         *,
         amount: int,
         timeout: None | timedelta = None,
-        check: Check = lambda *_: True
+        check: Check = lambda *_: True,
     ) -> Callable[..., Collector]:
         """Registers a collector to an event.
 
