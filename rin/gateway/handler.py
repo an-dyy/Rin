@@ -163,9 +163,9 @@ class Gateway:
 
     async def pulse(self) -> None:
         while not self.sock.closed:
+            self.last_heartbeat = datetime.now()
 
             await self(self.heartbeat)
-            self.last_heartbeat = datetime.now()
             self.sequence += 1
 
             await asyncio.sleep(self.interval / 1000)
