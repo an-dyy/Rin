@@ -14,7 +14,7 @@
 
 ### Installing from GitHub
 ```
-pip install -U git+https//github.com/an-dyy/Rin
+pip install -U git+https://github.com/an-dyy/Rin
 ```
 
 ### Installing from Pypi
