@@ -9,7 +9,7 @@ import aiohttp
 import attr
 
 from .gateway import Collector, Event, Gateway, Listener
-from .models import Intents, User
+from .models import Intents
 from .rest import RESTClient
 from .utils import ensure_loop
 
@@ -69,8 +69,6 @@ class GatewayClient:
     rest: RESTClient = attr.field(init=False)
     gateway: Gateway = attr.field(init=False)
     closed: bool = attr.field(init=False, default=False)
-
-    user: None | User = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.rest = RESTClient(self.token, self)

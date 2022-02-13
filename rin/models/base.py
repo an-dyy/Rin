@@ -1,129 +1,112 @@
 from __future__ import annotations
 
-import functools
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, get_args
 
+import inspect
 import attr
 
-from .cacheable import Cacheable
-
 if TYPE_CHECKING:
-    from rin import GatewayClient
+    from ..client import GatewayClient
 
-__all__ = ("Base",)
+AttrT = TypeVar("AttrT")
+__all__ = ("BaseModel",)
 
 
-@attr.s()
-class Base:
-    """A base class used in other models.
-
-    Attributes
-    ----------
-    client: :class:`.GatewayClient`
-        The client currently in-use.
-
-    data: :class:`dict`
-        The data of the object.
-    """
-
+@attr.s(slots=True, hash=True)  # type: ignore
+class BaseModel:
     __slots__ = ()
 
-    client: GatewayClient = attr.field(repr=False)
-    data: dict[Any, Any] = attr.field(repr=False)
+    client: "GatewayClient" = attr.field(repr=False)
+    data: dict[str, Any] = attr.field(repr=False)
 
     @staticmethod
-    def field(
-        *,
-        key: None | str = None,
-        cls: None | type[Any] = str,
-        has_client: bool = False,
-        **kwargs: Any,
-    ) -> Any:
-        """Used as an attribute placeholder.
+    def field(key: None | str = None, type: type[AttrT] = str, **kwargs: Any) -> AttrT:
+        """Sets a field for the class.
+
+        Acts as almost a placeholder value. Actual value is set on construction.
 
         Parameters
         ----------
         key: None | :class:`str`
-            The key to use when initializing the instance.
+            The key to do the data lookup with.
 
-        cls: :class:`type`
-            The class to create the attribute with.
-
-        has_client: :class:`bool`
-            If the class being used needs :class:`.GatewayClient` to be passed.
-
-        constructor: Callable[..., Any]
-            The constructor to use.
-
-        check: Callable[..., bool]
-            A check that items need to pass when passed a list.
+        type: :class:`type`
+            The type to use when constructing.
 
         kwargs: Any
-            Extra options to pass when calling :meth:`attr.field`.
+            Extra options to pass to :meth:`attr.field`.
         """
+        metadata = {"key": key, "type": type}
+        metadata["builder"] = kwargs.pop("builder", None)
+        metadata.pop("key")
+
         return attr.field(
             init=kwargs.pop("init", False),
-            default=kwargs.pop("default", None),
-            repr=kwargs.pop("repr", False),
-            metadata={
-                "key": key,
-                "cls": cls,
-                "has_client": has_client,
-                "constructor": kwargs.pop("constructor", None),
-                "check": kwargs.pop("check", None),
-            },
+            metadata=BaseModel.parse(key, **metadata, **kwargs),
             **kwargs,
         )
 
-    def serialize(self) -> dict[Any, Any]:
-        """Turns the object into a dict.
-        Intended to be in tandem with :meth:`.GatewayClient.unserialize`.
-        """
-        return self.data
+    @staticmethod
+    def parse(key: None | str, **kwargs: Any) -> dict[Any, Any]:
+        return {"key": key, **kwargs}
 
-    def __attrs_post_init__(self) -> None:
+    @staticmethod
+    def property(
+        key: None | str, type: type[AttrT] = str, **kwargs: Any
+    ) -> Callable[..., AttrT]:
+        """Sets a property of the class. Used for adding a constructor.
+
+        Parameters
+        ----------
+        key: None | :class:`str`
+            The key to do the data lookup from.
+
+        type: :class:`type`
+            The type to use when constructing.
+
+        kwargs: Any
+           Extra arguments to pass to :meth:`attr.field`.
+        """
+
+        def inner(func: Callable[..., Any]) -> Any:
+            return BaseModel.field(key, type, builder=func, **kwargs)
+
+        return inner
+
+    def construct(self) -> None:
+        """This method actually handles construction of attributes.
+
+        This method will iterate through all the fields specified on this class.
+        It will then check the type of the field by looking through the metadata.
+        """
         for attribute in attr.fields(self.__class__):
+
             if attribute.name in {"client", "data"}:
                 continue
 
-            metadata = attribute.metadata
-            value = self.data.get(metadata["key"] or attribute.name)
-            class_type = metadata["cls"]
+            data = self.data.get(attribute.metadata["key"])
+            type = attribute.metadata["type"]
 
-            if value is None:
-                setattr(self, attribute.name, attribute.default)
+            if issubclass(type, BaseModel):
+                setattr(self, attribute.name, type(self.client, data or {}))
                 continue
 
-            if class_type is None:
-                setattr(self, attribute.name, value)
+            elif builder := attribute.metadata.get("builder"):
+                setattr(self, attribute.name, builder(self, self.client, data))
                 continue
 
-            construct = (
-                (
-                    functools.partial(class_type, self.client)
-                    if metadata["has_client"]
-                    else functools.partial(class_type)
-                )
-                if not metadata["constructor"]
-                else (
-                    functools.partial(metadata["constructor"], self.client)
-                    if metadata["has_client"]
-                    else functools.partial(metadata["constructor"])
-                )
-            )
+            elif callable(type):
+                builtin = type.__class__.__module__ == "builtins"
+                if not builtin and len(inspect.getargspec(type)[0]) == 0:
+                    continue
 
-            if isinstance(value, list):
-                items: list[Any] = value
-                check: Callable[..., bool] = metadata["check"] or (lambda *_: True)
+                if isinstance(data, list):
+                    data = type([get_args(type)[0](val) for val in cast(Any, data)])
 
-                setattr(
-                    self,
-                    attribute.name,
-                    [construct(item) for item in items if check(item)],
-                )
-                continue
+                    setattr(self, attribute.name, data)
+                    continue
 
-            setattr(self, attribute.name, construct(value))
+                setattr(self, attribute.name, type(data))
 
-        if isinstance(self, Cacheable) and getattr(self, "id", None) is not None:
-            self.__class__.cache.set(getattr(self, "id"), self)
+    def __attrs_post_init__(self) -> None:
+        self.construct()
