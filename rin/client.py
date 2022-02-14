@@ -14,6 +14,8 @@ from .rest import RESTClient
 from .utils import ensure_loop
 
 if TYPE_CHECKING:
+    from .models import User
+
     Callback = Callable[..., Any]
     Check = Callable[..., bool]
 
@@ -69,6 +71,8 @@ class GatewayClient:
     rest: RESTClient = attr.field(init=False)
     gateway: Gateway = attr.field(init=False)
     closed: bool = attr.field(init=False, default=False)
+
+    user: None | User = attr.field(init=False, default=None)
 
     def __attrs_post_init__(self) -> None:
         self.rest = RESTClient(self.token, self)

@@ -84,10 +84,14 @@ class BaseModel:
             if attribute.name in {"client", "data"}:
                 continue
 
-            data = self.data.get(attribute.metadata["key"])
+            data = self.data.get(attribute.metadata["key"] or attribute.name)
             type = attribute.metadata["type"]
 
-            if issubclass(type, BaseModel):
+            if data is None:
+                setattr(self, attribute.name, None)
+                continue
+
+            elif issubclass(type, BaseModel):
                 setattr(self, attribute.name, type(self.client, data or {}))
                 continue
 

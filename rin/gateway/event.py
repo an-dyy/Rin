@@ -74,6 +74,7 @@ T = TypeVar(
         "VOICE_STATE_UPDATE",
         "VOICE_SERVER_UPDATE",
         "WEBHOOKS_UPDATE",
+        "USER_UPDATE",
     ],
 )
 
@@ -395,3 +396,4 @@ class Events:
     VOICE_SERVER_UPDATE = Event("VOICE_SERVER_UPDATE")
 
     WEBHOOKS_UPDATE = Event("WEBHOOKS_UPDATE")
+    USER_UPDATE = Event("USER_UPDATE")

@@ -55,14 +55,21 @@ Models
 ------
 Models in the wrapper.
 
+Builders
+~~~~~~~~
 Base
-~~~~
-.. autoclass:: Base
+^^^^
+.. autoclass:: BaseModel
     :members:
 
 Intents
-~~~~~~~
+^^^^^^^
 .. autoclass:: Intents
+    :members:
+
+EmbedBuilder
+^^^^^^^^^^^^
+.. autoclass:: EmbedBuilder
     :members:
 
 User
