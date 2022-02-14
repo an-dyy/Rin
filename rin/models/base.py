@@ -20,7 +20,7 @@ class BaseModel:
     data: dict[str, Any] = attr.field(repr=False)
 
     @staticmethod
-    def field(key: None | str = None, type: type[AttrT] = str, **kwargs: Any) -> AttrT:
+    def field(key: None | str = None, type: type[Any] = str, **kwargs: Any) -> Any:
         """Sets a field for the class.
 
         Acts as almost a placeholder value. Actual value is set on construction.
@@ -52,8 +52,8 @@ class BaseModel:
 
     @staticmethod
     def property(
-        key: None | str, type: type[AttrT] = str, **kwargs: Any
-    ) -> Callable[..., AttrT]:
+        key: None | str, type: type[Any] = str, **kwargs: Any
+    ) -> Callable[..., Any]:
         """Sets a property of the class. Used for adding a constructor.
 
         Parameters

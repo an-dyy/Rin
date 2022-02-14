@@ -77,3 +77,9 @@ User
 .. autoclass:: User
     :show-inheritance:
     :members:
+
+Message
+~~~~~~~
+.. autoclass:: Message
+    :show-inheritance:
+    :members:

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import attr
 from .event import Event, Events
 
-from ..models import User
+from ..models import User, Message
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
@@ -51,3 +51,6 @@ class Parser:
         self.client.user = user
 
         self.client.dispatch(Events.READY, user)
+
+    async def parse_message_create(self, data: dict[Any, Any]) -> None:
+        self.client.dispatch(Events.MESSAGE_CREATE, Message(self.client, data))
