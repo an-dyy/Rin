@@ -9,7 +9,7 @@ import aiohttp
 import attr
 
 from .gateway import Collector, Event, Gateway, Listener
-from .models import Intents
+from .models import IntentsBuilder, MessageBuilder, Snowflake
 from .rest import RESTClient
 from .utils import ensure_loop
 
@@ -64,15 +64,15 @@ class GatewayClient:
     """
 
     token: str = attr.field(repr=False)
-    intents: Intents = attr.field(kw_only=True, default=Intents.default())
-    no_chunk: bool = attr.field(kw_only=True, default=False)
-    loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None)
+    intents: IntentsBuilder = attr.field(kw_only=True, default=IntentsBuilder.default())
+    no_chunk: bool = attr.field(kw_only=True, default=False, repr=True)
+    loop: asyncio.AbstractEventLoop = attr.field(kw_only=True, default=None, repr=False)
 
-    rest: RESTClient = attr.field(init=False)
-    gateway: Gateway = attr.field(init=False)
-    closed: bool = attr.field(init=False, default=False)
+    rest: RESTClient = attr.field(init=False, repr=False)
+    gateway: Gateway = attr.field(init=False, repr=False)
+    closed: bool = attr.field(init=False, default=False, repr=True)
 
-    user: None | User = attr.field(init=False, default=None)
+    user: None | User = attr.field(init=False, default=None, repr=False)
 
     def __attrs_post_init__(self) -> None:
         self.rest = RESTClient(self.token, self)
@@ -117,6 +117,21 @@ class GatewayClient:
 
         await session.close()
         await self.gateway.close()
+
+    def sender(self, snowflake: Snowflake | int) -> MessageBuilder:
+        """Creates a :class:`.MessageBuilder` from the client.
+
+        Parameters
+        ----------
+        snowflake: :class:`.Snowflake` | :class:`int`
+            The snowflake of the channel to create the builder for.
+
+        Returns
+        -------
+        :class:`.MessageBuilder`
+            The created MessageBuilder instance.
+        """
+        return MessageBuilder(self, snowflake)
 
     def unserialize(self, data: dict[Any, Any], *, cls: type[T]) -> T:
         """Un-serializes a serialized object. Used for persistent objects.

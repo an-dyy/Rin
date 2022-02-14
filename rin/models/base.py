@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, get_args
 
-import inspect
 import attr
 
 if TYPE_CHECKING:

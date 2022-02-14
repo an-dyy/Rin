@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import attr
-from .event import Event, Events
 
-from ..models import User, Message
+from ..models import Message, User
+from .event import Event, Events
 
 if TYPE_CHECKING:
     from ..client import GatewayClient

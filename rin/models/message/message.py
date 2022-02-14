@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 import attr
 
+from ...rest import Route
+from ..assets import File
 from ..base import BaseModel
-from ..cacheable import Cacheable
 from ..builders import EmbedBuilder
+from ..cacheable import Cacheable
 from ..snowflake import Snowflake
 from ..user import User
+from .mentions import AllowedMentions
 from .types import MessageType
 
 if TYPE_CHECKING:
@@ -51,7 +53,7 @@ class Message(BaseModel, Cacheable, max=1000):
         The content of the message.
 
     tts: :class:`bool`
-        If the message was sent with text-to-speach.
+        If the message was sent with text-to-speech.
 
     mentioned_everyone: :class:`bool`
         If the message mentioned everyone.
@@ -141,6 +143,11 @@ class Message(BaseModel, Cacheable, max=1000):
     application: None | dict[Any, Any] = BaseModel.field(None, dict[str, Any])
     message_reference: None | Message = BaseModel.field(None, dict[str, Any])
 
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+        self.type = MessageType(self.data["type"])
+        Message.cache.set(self.snowflake, self)
+
     @BaseModel.property("embeds", list[EmbedBuilder])
     def embeds(self, _: GatewayClient, data: list[dict[Any, Any]]) -> list[EmbedBuilder]:
         return [EmbedBuilder.from_dict(e) for e in data]
@@ -158,7 +165,145 @@ class Message(BaseModel, Cacheable, max=1000):
         if timestamp is not None:
             return datetime.fromisoformat(timestamp)
 
-    def __attrs_post_init__(self) -> None:
-        super().__attrs_post_init__()
-        self.type = MessageType(self.data["type"])
-        Message.cache.set(self.snowflake, self)
+    def reference(self) -> dict[str, Snowflake]:
+        """Creates a message reference from the instance.
+
+        Returns
+        -------
+        :class:`dict`
+            The created dict representing the message's reference.
+        """
+        return {"message_id": self.snowflake}
+
+    async def reply(
+        self,
+        content: None | str = None,
+        tts: bool = False,
+        embeds: list[EmbedBuilder] = [],
+        files: list[File] = [],
+        mentions: AllowedMentions = AllowedMentions(),
+    ) -> Message:
+        """Sends a message repyling to this message
+        into the channel corresponding to the passed in :class:`.Snowflake`.
+
+        Parameters
+        ----------
+        content: None | :class:`str`
+            The content to give the message.
+
+        tts: :class:`bool`
+            If the message should be sent with text-to-speech. Defaults to False.
+
+        embeds: :class:`list`
+            A list of :class:`.EmbedBuilder` instances to send with the message.
+
+        files: :class:`list`
+            A list of :class:`.File` instances to send with the message.
+
+        mentions: :class:`.AllowedMentions`
+            The allowed mentions of the message.
+
+        Returns
+        -------
+        :class:`.Message`
+            An instance of the newly sent message.
+        """
+        sender = self.client.sender(self.channel_id)
+        return await sender.send(content, tts, embeds, files, self, mentions)
+
+    async def delete(self) -> None:
+        """Deletes the message.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong.
+        """
+        route = Route(
+            f"/channels/{self.channel_id}/messages/{self.snowflake}",
+            channel_id=self.channel_id,
+        )
+
+        Message.cache.pop(self.snowflake)
+        await self.client.rest.request("DELETE", route)
+
+    async def react(self, reaction: str) -> None:
+        """Adds a reaction to the message.
+
+        Parameters
+        ----------
+        reaction: :class:`str`
+            The reaction to react with.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong.
+        """
+        route = Route(
+            f"channels/{self.channel_id}/messages/{self.snowflake}/reactions/{reaction}/@me",
+            channel_id=self.channel_id,
+        )
+
+        await self.client.rest.request("PUT", route)
+
+    async def delete_reaction(
+        self, reaction: str, user: None | User | Snowflake | int = None
+    ) -> None:
+        """Deletes a reaction from the message.
+
+        Parameters
+        ----------
+        reaction: :class:`str`
+            The reaction to delete from the message.
+
+        user: None | :class:`.User` | :class:`.Snowflake` | :class:`int`
+            The user to remove the reaction from.
+            If no user is passed the user will be defaulted to the current authorised user.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong.
+        """
+        path = (
+            "@me" if user is None else user.snowflake if isinstance(user, User) else None
+        )
+        if isinstance(user, (int, Snowflake)):
+            path = user
+
+        route = Route(
+            f"/channels/{self.channel_id}/messages/{self.snowflake}/reactions/{reaction}/{path}"
+        )
+
+        await self.client.rest.request("DELETE", route)
+
+    async def pin(self) -> None:
+        """Pins the message.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong while making the request.
+        """
+        route = Route(
+            f"channels/{self.channel_id}/pins/{self.snowflake}",
+            channel_id=self.channel_id,
+        )
+
+        await self.client.rest.request("PUT", route)
+
+    async def unpin(self) -> None:
+        """Unpins the message.
+
+        Raises
+        ------
+        :exc:`.HTTPException`
+            Something went wrong while making the request.
+        """
+        route = Route(
+            f"channels/{self.channel_id}/pins/{self.snowflake}",
+            channel_id=self.channel_id,
+        )
+
+        await self.client.rest.request("DELETE", route)

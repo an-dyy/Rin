@@ -5,11 +5,10 @@ import base64
 import attr
 import magic
 
+from ..rest import Route
 from .base import BaseModel
 from .cacheable import Cacheable
 from .snowflake import Snowflake
-
-from ..rest import Route
 
 
 @attr.s(slots=True)

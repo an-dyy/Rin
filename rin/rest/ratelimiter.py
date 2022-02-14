@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -73,9 +74,7 @@ class Ratelimiter:
         if semaphore := self.get(self.bucket):
             return semaphore
 
-        resp: RatelimitedClientResponse = await self.rest._request(
-            "HEAD", self.endpoint
-        )
+        resp: RatelimitedClientResponse = await self.rest._request("HEAD", self.endpoint)
 
         semaphore = asyncio.Semaphore(resp.limit)
         self.rest.semaphores[self.bucket] = semaphore
@@ -125,6 +124,23 @@ class Ratelimiter:
         async with self.rest.semaphores["global"]:
             await semaphore.acquire()
             await route.event.wait()
+
+            headers = {"Authorization": f"Bot {self.rest.token}"}
+
+            if reason := kwargs.get("reason"):
+                headers["X-Audit-Log-Reason"] = reason
+
+            if form := kwargs.pop("form", []):
+                formdata = aiohttp.FormData()
+                payload = kwargs.pop("json", None)
+
+                if payload:
+                    formdata.add_field("payload_json", value=json.dumps(payload))
+
+                for params in form:
+                    formdata.add_field(**params)
+
+                kwargs["data"] = formdata
 
             resp = await self.rest._request(method, self.endpoint, **kwargs)
             data: dict[Any, Any] | str = await resp.data()
