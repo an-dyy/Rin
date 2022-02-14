@@ -84,6 +84,10 @@ class User(BaseModel, Cacheable):
     public_flags: int = BaseModel.field(None, int, default=0)
     premium: int = BaseModel.field("premium_type", int, default=0)
 
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+        User.cache.set(self.snowflake, self)
+
     async def edit(
         self, username: str | None = None, avatar: None | bytes = None
     ) -> User:
