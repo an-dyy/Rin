@@ -7,7 +7,6 @@ from typing import Any
 
 import rin
 
-logging.basicConfig(level=logging.DEBUG)
 CUSTOM_MESSAGE_CREATE = rin.Event[Any]("CUSTOM_MESSAGE_CREATE")
 
 

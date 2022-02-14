@@ -23,7 +23,7 @@ class TestGatewayClient:
         assert client.token is not None and isinstance(client.token, str)
         assert client.gateway is not None and isinstance(client.gateway, rin.Gateway)
         assert client.rest is not None and isinstance(client.rest, rin.RESTClient)
-        assert client.intents.value == rin.Intents.default().value
+        assert client.intents.value == rin.IntentsBuilder.default().value
 
         assert client.no_chunk is False
         assert client.closed is False
