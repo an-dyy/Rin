@@ -6,13 +6,12 @@ from datetime import datetime
 
 import attr
 
-from rin.models.message.types import MessageType
-
 from ..base import BaseModel
 from ..cacheable import Cacheable
 from ..builders import EmbedBuilder
 from ..snowflake import Snowflake
 from ..user import User
+from .types import MessageType
 
 if TYPE_CHECKING:
     from ...client import GatewayClient
@@ -143,9 +142,7 @@ class Message(BaseModel, Cacheable, max=1000):
     message_reference: None | Message = BaseModel.field(None, dict[str, Any])
 
     @BaseModel.property("embeds", list[EmbedBuilder])
-    def embeds(
-        self, _: GatewayClient, data: list[dict[Any, Any]]
-    ) -> list[EmbedBuilder]:
+    def embeds(self, _: GatewayClient, data: list[dict[Any, Any]]) -> list[EmbedBuilder]:
         return [EmbedBuilder.from_dict(e) for e in data]
 
     @BaseModel.property("mentions", list[User])
