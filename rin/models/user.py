@@ -122,6 +122,7 @@ class User(BaseModel, Cacheable):
             self.data = await self.client.rest.request(
                 "PATCH", Route("users/@me"), json=payload
             )
+
             self.username = username if username is not None else self.username
             self.avatar = self.data.get("avatar") or self.avatar
 
