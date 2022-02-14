@@ -266,11 +266,9 @@ class Message(BaseModel, Cacheable, max=1000):
         :exc:`.HTTPException`
             Something went wrong.
         """
-        path = (
-            "@me" if user is None else user.snowflake if isinstance(user, User) else None
-        )
-        if isinstance(user, (int, Snowflake)):
-            path = user
+        path = "@me" if user is None else user
+        if isinstance(path, User):
+            path = path.snowflake
 
         route = Route(
             f"/channels/{self.channel_id}/messages/{self.snowflake}/reactions/{reaction}/{path}"
