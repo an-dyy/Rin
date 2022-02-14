@@ -57,10 +57,10 @@ class Message(BaseModel, Cacheable, max=1000):
     mentioned_everyone: :class:`bool`
         If the message mentioned everyone.
 
-    mentioned_roles: list[:class:`dict`]
+    mention_roles: list[:class:`dict`]
         A list of mentioned roles in the message.
 
-    mentioned_channels: list[:class:`dict`]
+    mention_channels: list[:class:`dict`]
         A list of mentioned channels in the message.
 
     attachments: list[:class:`dict`]
@@ -69,7 +69,7 @@ class Message(BaseModel, Cacheable, max=1000):
     thread: None | :class:`dict`
         The thread the message was sent in, if any.
 
-    stickers: list[:class:`dict`]
+    sticker_items: list[:class:`dict`]
         A list of stickers sent with the message.
 
     reactions: list[:class:`dict`]
@@ -122,21 +122,15 @@ class Message(BaseModel, Cacheable, max=1000):
 
     content: str = BaseModel.field(None, str)
     tts: bool = BaseModel.field(None, bool)
-    mentioned_everyone: bool = BaseModel.field(None, bool)
+    mentioned_everyone: bool = BaseModel.field("mention_everyone", bool)
 
     #  TODO: IMPLEMENT ALL THESE MODELS AND REPLACE TYPEHINT
-    mentioned_roles: list[dict[Any, Any]] = BaseModel.field(
-        "mention_roles", list[dict[str, Any]]
-    )
-    mentioned_channels: list[dict[Any, Any]] = BaseModel.field(
-        "mention_channels", list[dict[str, Any]]
-    )
+    mention_roles: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
+    mention_channels: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
     attachments: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
     thread: None | dict[str, Any] = BaseModel.field(None, dict[str, Any])
 
-    stickers: list[dict[str, Any]] = BaseModel.field(
-        "sticker_items", list[dict[str, Any]]
-    )
+    sticker_items: list[dict[str, Any]] = BaseModel.field(None, list[dict[str, Any]])
     reactions: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
 
     interaction: None | dict[str, Any] = BaseModel.field(None, dict[str, Any])
