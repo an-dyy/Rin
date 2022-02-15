@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import Message, User
+from ..models import Guild, Message, User
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -53,4 +53,23 @@ class Parser:
         self.client.dispatch(Events.READY, user)
 
     async def parse_message_create(self, data: dict[Any, Any]) -> None:
+        """Parses the `MESSAGE_CREATE` event.
+        Dispatches a :class:`.Message` object
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data from the event.
+        """
         self.client.dispatch(Events.MESSAGE_CREATE, Message(self.client, data))
+
+    async def parse_guild_create(self, data: dict[Any, Any]) -> None:
+        """Parses the `GUILD_CREATE` event.
+        Dispatches a :class:`.Guild` object
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data from the event.
+        """
+        self.client.dispatch(Events.GUILD_CREATE, Guild(self.client, data))
