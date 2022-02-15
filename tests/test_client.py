@@ -28,8 +28,7 @@ class TestGatewayClient:
         assert client.no_chunk is False
         assert client.closed is False
         assert client.loop is None
-
-        assert not hasattr(client, "user")
+        assert client.user is None
 
     @pytest.mark.asyncio()
     async def test_start(self, client: rin.GatewayClient) -> None:
