@@ -109,6 +109,17 @@ MessageBuilder
 .. autoclass:: MessageBuilder
     :members:
 
+ANSIBuilder
+~~~~~~~~~~~
+.. autoclass:: ANSIBuilder
+    :members:
+
+.. autoclass:: Mode
+    :members:
+
+.. autoclass:: Color
+   :members:
+
 
 Assets
 ------
