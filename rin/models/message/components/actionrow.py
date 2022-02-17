@@ -89,7 +89,7 @@ class ActionRow(metaclass=ActionRowMeta):
     components: list[Component] = attr.field(default=cast(list[Component], []))
 
     def __attrs_post_init__(self) -> None:
-        self.set(*self.__components__)
+        self.add(*self.__components__)
 
     def add(self, *components: Component) -> None:
         """Adds components to the action row.
@@ -98,16 +98,6 @@ class ActionRow(metaclass=ActionRowMeta):
         ----------
         components: :class:`.Component`
             The components instance to add to the action row.
-        """
-        self.components.extend(components)
-
-    def set(self, *components: Component) -> None:
-        """Sets the components of the action row.
-
-        Parameters
-        ----------
-        components: :class:`.Component`
-            The component instance to set for this action row.
         """
         self.components.extend(components)
 
