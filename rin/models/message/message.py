@@ -17,6 +17,7 @@ from .types import MessageType
 
 if TYPE_CHECKING:
     from ...client import GatewayClient
+    from .components import ActionRow
 
 __all__ = ("Message",)
 
@@ -181,6 +182,7 @@ class Message(BaseModel, Cacheable, max=1000):
         tts: bool = False,
         embeds: list[EmbedBuilder] = [],
         files: list[File] = [],
+        rows: list[ActionRow] = [],
         mentions: AllowedMentions = AllowedMentions(),
     ) -> Message:
         """Sends a message repyling to this message
@@ -209,7 +211,7 @@ class Message(BaseModel, Cacheable, max=1000):
             An instance of the newly sent message.
         """
         sender = self.client.sender(self.channel_id)
-        return await sender.send(content, tts, embeds, files, self, mentions)
+        return await sender.send(content, tts, embeds, files, rows, self, mentions)
 
     async def delete(self) -> None:
         """Deletes the message.

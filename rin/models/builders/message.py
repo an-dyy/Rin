@@ -6,7 +6,7 @@ import attr
 
 from ...rest import Route
 from ..assets import File
-from ..message import AllowedMentions, Message
+from ..message import ActionRow, AllowedMentions, Message
 from ..snowflake import Snowflake
 from .embed import EmbedBuilder
 
@@ -53,6 +53,7 @@ class MessageBuilder:
         tts: bool = False,
         embeds: list[EmbedBuilder] = [],
         files: list[File] = [],
+        rows: list[ActionRow] = [],
         reply: None | Message = None,
         mentions: AllowedMentions = AllowedMentions(),
     ) -> Message:
@@ -96,6 +97,7 @@ class MessageBuilder:
             "content": content,
             "tts": tts,
             "embeds": [e.to_dict() for e in embeds],
+            "components": [r.to_dict() for r in rows],
             "allowed_mentions": mentions.to_dict(),
         }
 

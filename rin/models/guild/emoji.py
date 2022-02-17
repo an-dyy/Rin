@@ -13,7 +13,7 @@ from .role import Role
 if TYPE_CHECKING:
     from ...client import GatewayClient
 
-__all__ = ("Emoji",)
+__all__ = ("Emoji", "PartialEmoji")
 
 
 @attr.s(slots=True)
@@ -71,3 +71,24 @@ class Emoji(BaseModel, Cacheable):
             continue
 
         return roles
+
+
+@attr.s(slots=True)
+class PartialEmoji:
+    """A partial emoji class.
+
+    Attributes
+    ----------
+    name: :class:`str`
+        The name of the emoji.
+
+    id: :class:`int`
+        The ID of the emoji.
+
+    animated: :class:`bool`
+        If the emoji is animated.
+    """
+
+    name: str = attr.field()
+    id: int = attr.field()
+    animated: bool = attr.field()

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import Guild, Message, User
+from ..models import ComponentCache, Guild, Interaction, InteractionType, Message, User
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -51,6 +51,25 @@ class Parser:
         self.client.user = user
 
         self.client.dispatch(Events.READY, user)
+
+    async def parse_interaction_create(self, data: dict[Any, Any]) -> None:
+        """Parses the `INTERACTION_CREATE` event.
+        Dispatches a :class:`.Interaction` object
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data from the event.
+        """
+        interaction = Interaction(self.client, data)
+
+        if interaction.type is InteractionType.COMPONENT:
+            if component := ComponentCache.cache.get(
+                interaction.actual_data["custom_id"]
+            ):
+                await component.callback(interaction, component)
+
+        self.client.dispatch(Events.INTERACTION_CREATE, interaction)
 
     async def parse_message_create(self, data: dict[Any, Any]) -> None:
         """Parses the `MESSAGE_CREATE` event.
