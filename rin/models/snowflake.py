@@ -1,36 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
+from typing import Any
 
-__all__ = ("Snowflake", "Object")
+__all__ = ("Snowflake",)
 
 
-class Snowflake(Protocol):
-    """A snowflake protocol.
+class Snowflake(int):
+    """Represents a snowflake."""
 
-    Attributes
-    ----------
-    id: :class:`int`
-        The snowflake.
-
-    """
-
-    __slots__ = ()
-    id: int
+    def __new__(cls, *args: Any, **kwargs: Any) -> Snowflake:
+        return super().__new__(cls, *args, **kwargs)
 
     @property
     def created_at(self) -> datetime:
-        """The date at which the snowflake was created.
-        See https://discord.com/developers/docs/reference#snowflakes for more info.
-        """
-
-        return datetime.fromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
-
-
-class Object(Snowflake):
-    def __init__(self, id: int) -> None:
-        self.id = id
-
-    def __repr__(self) -> str:
-        return f"<Object id={self.id}>"
+        """The time at which the snowflake was created."""
+        return datetime.fromtimestamp(((self >> 22) + 1420070400000) / 1000)

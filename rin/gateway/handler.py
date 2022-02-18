@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 from datetime import datetime
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 
 import aiohttp
 import attr
@@ -16,7 +16,7 @@ from .ratelimiter import Ratelimiter
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
-    from ..models import Intents
+    from ..models import IntentsBuilder
     from ..typings import (
         DispatchPayload,
         HeartbeatPayload,
@@ -50,7 +50,7 @@ class WSMessage(NamedTuple):
 @attr.s(slots=True)
 class Gateway:
     client: GatewayClient = attr.field(repr=False)
-    intents: Intents = attr.field(init=False, repr=False)
+    intents: IntentsBuilder = attr.field(init=False, repr=False)
     loop: asyncio.AbstractEventLoop = attr.field(init=False, repr=False)
 
     parser: Parser = attr.field(init=False, repr=False)
@@ -123,9 +123,7 @@ class Gateway:
 
             if code == OPCode.HEARTBEAT_ACK:
                 if self.last_heartbeat is not None:
-                    self.latency = (
-                        datetime.now() - self.last_heartbeat
-                    ).total_seconds()
+                    self.latency = (datetime.now() - self.last_heartbeat).total_seconds()
 
                 _log.debug("GATEWAY ACK'D HEARTBEAT.")
 

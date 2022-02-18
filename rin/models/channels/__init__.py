@@ -1,2 +1,2 @@
-from .textchannel import *
+from .text import *
 from .types import *

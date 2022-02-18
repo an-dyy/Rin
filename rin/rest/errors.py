@@ -23,6 +23,9 @@ class HTTPException(Exception):
         self.data = data
         super().__init__(f"{self.message!r}")
 
+    def __repr__(self) -> str:
+        return f"{self.message!r} data: {self.data} code: {self.code}"
+
     @property
     def code(self) -> int:
         """The error's code."""

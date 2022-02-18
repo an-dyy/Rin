@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 from typing import Any
 
 import rin
 
-logging.basicConfig(level=logging.DEBUG)
 CUSTOM_MESSAGE_CREATE = rin.Event[Any]("CUSTOM_MESSAGE_CREATE")
+client = rin.GatewayClient(os.environ["DISCORD_TOKEN"])
 
 
 class CustomMessage(rin.Message):
     @property
     def custom(self) -> str:
         return "Some custom property!"
-
-
-client = rin.GatewayClient(os.environ["DISCORD_TOKEN"])
 
 
 @client.on(rin.Events.WILDCARD)

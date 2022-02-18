@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     Bases = tuple[type, ...]
     Attrs = dict[Any, Any]
 
-__all__ = ("Intents",)
+__all__ = ("IntentsBuilder",)
 
 
 class IntentsMeta(type):
@@ -27,7 +27,7 @@ class IntentsMeta(type):
         return super().__new__(cls, name, bases, attrs)
 
 
-class Intents(metaclass=IntentsMeta):
+class IntentsBuilder(metaclass=IntentsMeta):
     """A helper class for Intents.
     Creates an intent value from passed in keyword-arguments.
 
@@ -169,7 +169,7 @@ class Intents(metaclass=IntentsMeta):
         self.guild_scheduled_events: bool
 
     @classmethod
-    def create(cls: type[Intents], **kwargs: bool) -> Intents:
+    def create(cls: type[IntentsBuilder], **kwargs: bool) -> IntentsBuilder:
         """Creates an intents instance with a value specific to
         the passed in keyword-arguments.
 
@@ -212,7 +212,7 @@ class Intents(metaclass=IntentsMeta):
         return self
 
     @classmethod
-    def default(cls: type[Intents], **kwargs: bool) -> Intents:
+    def default(cls: type[IntentsBuilder], **kwargs: bool) -> IntentsBuilder:
         """Creates an intents instance without privileged intents.
 
         Parameters
@@ -244,7 +244,7 @@ class Intents(metaclass=IntentsMeta):
         )
 
     @classmethod
-    def privileged(cls: type[Intents], **kwargs: bool) -> Intents:
+    def privileged(cls: type[IntentsBuilder], **kwargs: bool) -> IntentsBuilder:
         """Creates an intents instance with only privileged intents.
 
         Parameters
@@ -261,7 +261,7 @@ class Intents(metaclass=IntentsMeta):
         return cls.create(**kwargs, guild_members=True, guild_presences=True)
 
     @classmethod
-    def none(cls: type[Intents]) -> Intents:
+    def none(cls: type[IntentsBuilder]) -> IntentsBuilder:
         """Creates an intents instance without any intents.
 
         Returns

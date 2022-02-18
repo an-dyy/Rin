@@ -4,13 +4,12 @@ import asyncio
 import functools
 import inspect
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
 
 import attr
 
 if TYPE_CHECKING:
     from ..client import GatewayClient
-    from ..models import Message, User
 
     Timeout = None | float
     Check = Callable[..., bool]
@@ -75,6 +74,7 @@ T = TypeVar(
         "VOICE_STATE_UPDATE",
         "VOICE_SERVER_UPDATE",
         "WEBHOOKS_UPDATE",
+        "USER_UPDATE",
     ],
 )
 
@@ -314,30 +314,6 @@ class Event(Generic[T]):
 
         return inner
 
-    @overload
-    async def wait(
-        self: Event[Literal["WILDCARD"]],
-        timeout: None | float = None,
-        check: Check = lambda *_: True,
-    ) -> tuple[Event[Any], dict[Any, Any]]:
-        ...
-
-    @overload
-    async def wait(
-        self: Event[Literal["READY"]],
-        timeout: None | float = None,
-        check: Check = lambda *_: True,
-    ) -> User:
-        ...
-
-    @overload
-    async def wait(
-        self: Event[Literal["MESSAGE_CREATE"]],
-        timeout: None | float = None,
-        check: Check = lambda *_: True,
-    ) -> Message:
-        ...
-
     async def wait(
         self, timeout: None | float = None, check: Check = lambda *_: True
     ) -> Any:
@@ -420,3 +396,4 @@ class Events:
     VOICE_SERVER_UPDATE = Event("VOICE_SERVER_UPDATE")
 
     WEBHOOKS_UPDATE = Event("WEBHOOKS_UPDATE")
+    USER_UPDATE = Event("USER_UPDATE")

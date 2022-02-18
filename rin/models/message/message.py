@@ -6,148 +6,212 @@ from typing import TYPE_CHECKING, Any
 import attr
 
 from ...rest import Route
-from ..base import Base
+from ..assets import File
+from ..base import BaseModel
+from ..builders import EmbedBuilder
 from ..cacheable import Cacheable
-from ..channels import TextChannel
-from ..guild import Member
 from ..snowflake import Snowflake
 from ..user import User
-from .partial import PartialSender
+from .mentions import AllowedMentions
+from .types import MessageType
 
 if TYPE_CHECKING:
-    from ..builders import EmbedBuilder
-    from ..guild import Guild
-    from .components import ActionRowBuilder
-    from .mentions import AllowedMentions
+    from ...client import GatewayClient
+    from .components import ActionRow
 
 __all__ = ("Message",)
 
 
 @attr.s(slots=True)
-class Message(Base, Cacheable, max=1000):
-    id: int = Base.field(cls=int, repr=True)
-    channel: TextChannel = Base.field()
+class Message(BaseModel, Cacheable, max=1000):
+    """Represents a Message.
 
-    channel_id: int = Base.field(cls=int, repr=True)
-    guild_id: int = Base.field(cls=int)
-    guild: Guild = Base.field()
+    Attributes
+    ----------
+    snowflake: :class:`.Snowflake`
+        The snowflake of the message.
 
-    user: User = Base.field(cls=User)
-    member: dict[Any, Any] = Base.field()
-    author: User | Member = Base.field()
+    channel_id: :class:`.Snowflake`
+        The snowflake of the message's parent channel.
 
-    content: str = Base.field()
-    timestamp: datetime = Base.field(constructor=datetime.fromisoformat)
-    editted_timestamp: datetime = Base.field(constructor=datetime.fromisoformat)
+    guild_id: None | :class:`.Snowflake`
+        The snowflake of the guild the message was sent in. None
+        if the message was sent inside of a direct-message channel.
 
-    tts: bool = Base.field()
-    mentioned_everyone = Base.field(key="mention_everyone")
+    webhook_id: None | :class:`Snowflake`
+        The snowflake of the webhook if the message was sent from one.
 
-    mentions: list[User] = Base.field(cls=User, has_client=True)
-    mentioned_roles: list[dict[Any, Any]] = Base.field()
-    mentioned_channels: list[dict[Any, Any]] = Base.field()
+    application_id: None | :class:`.Snowflake`
+        The snowflake of the message's application.
 
-    referenced: None | dict[Any, Any] = Base.field(key="referenced_message")
+    user: :class:`.User`
+        The user object of the user who sent the message.
 
-    thread: None | dict[Any, Any] = Base.field()
-    attachments: list[dict[Any, Any]] = Base.field()
-    embeds: list[dict[Any, Any]] = Base.field()
-    reactions: list[dict[Any, Any]] = Base.field()
-    activity: dict[Any, Any] = Base.field()
+    member: :class:`dict`
+        The member object of the user who sent the message.
 
-    nonce: None | str = Base.field()
-    pinned: bool = Base.field()
+    content: :class:`str`
+        The content of the message.
 
-    webhook_id: None | int = Base.field(cls=int)
-    application_id: None | int = Base.field(cls=int)
-    application: None | dict[Any, Any] = Base.field()
+    tts: :class:`bool`
+        If the message was sent with text-to-speech.
 
-    type: int = Base.field(cls=int)
-    flags: None | int = Base.field(cls=int)
+    mentioned_everyone: :class:`bool`
+        If the message mentioned everyone.
 
-    interaction: None | dict[Any, Any] = Base.field()
-    components: None | list[dict[Any, Any]] = Base.field()
+    mention_roles: list[:class:`dict`]
+        A list of mentioned roles in the message.
 
-    stickers: None | list[dict[Any, Any]] = Base.field(key="sticker_items")
+    mention_channels: list[:class:`dict`]
+        A list of mentioned channels in the message.
+
+    attachments: list[:class:`dict`]
+        A list of attachments sent with the message.
+
+    thread: None | :class:`dict`
+        The thread the message was sent in, if any.
+
+    sticker_items: list[:class:`dict`]
+        A list of stickers sent with the message.
+
+    reactions: list[:class:`dict`]
+        A list of the reactions on the message.
+
+    interaction: None | :class:`dict`
+        The interaction of the message. Only given when the message is an interaction response.
+
+    components: list[:class:`dict`]
+        A list of message components sent with the message.
+
+    nonce: None | :class:`str`
+        Used for validating a message was sent.
+
+    pinned: :class:`bool`
+        If the message is pinned.
+
+    type: :class:`.MessageType`
+        The message's type.
+
+    application: None | :class:`dict`
+        The application of the message.
+
+    message_reference: None | :class:`dict`
+        The message's reference.
+
+    embeds: list[:class:`.EmbedBuilder`]
+        A list of embeds sent with the message.
+
+    mentions: list[:class:`.User`]
+        A list of mentioned users in the message.
+
+    timestamp: :class:`datetime.datetime`
+        The timestamp for when the message was created.
+
+    editted_at: :class:`datetime.datetime`
+        The time when the message was editted. None if the message hasn't
+        been editted.
+    """
+
+    snowflake: Snowflake = BaseModel.field("id", Snowflake)
+    channel_id: Snowflake = BaseModel.field(None, Snowflake)
+
+    guild_id: None | Snowflake = BaseModel.field(None, Snowflake)
+    webhook_id: None | Snowflake = BaseModel.field(None, Snowflake)
+    application_id: None | Snowflake = BaseModel.field(None, Snowflake)
+
+    user: User = BaseModel.field("author", User)
+    member: dict[Any, Any] = BaseModel.field(None, dict)
+
+    content: str = BaseModel.field(None, str)
+    tts: bool = BaseModel.field(None, bool)
+    mentioned_everyone: bool = BaseModel.field("mention_everyone", bool)
+
+    #  TODO: IMPLEMENT ALL THESE MODELS AND REPLACE TYPEHINT
+    mention_roles: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
+    mention_channels: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
+    attachments: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
+    thread: None | dict[str, Any] = BaseModel.field(None, dict[str, Any])
+
+    sticker_items: list[dict[str, Any]] = BaseModel.field(None, list[dict[str, Any]])
+    reactions: list[dict[Any, Any]] = BaseModel.field(None, list[dict[str, Any]])
+
+    interaction: None | dict[str, Any] = BaseModel.field(None, dict[str, Any])
+    components: list[dict[str, Any]] = BaseModel.field(None, list[dict[str, Any]])
+
+    nonce: None | str = BaseModel.field(None, str)
+    pinned: bool = BaseModel.field(None, bool)
+
+    application: None | dict[Any, Any] = BaseModel.field(None, dict[str, Any])
+    message_reference: None | Message = BaseModel.field(None, dict[str, Any])
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        self.channel = TextChannel.cache[self.channel_id]
-        self.author = (
-            Member(self.client, self.data["author"])
-            if self.member
-            else User(self.client, self.data["author"])
-        )
+        self.type = MessageType(self.data["type"])
+        Message.cache.set(self.snowflake, self)
 
-    def to_reference(self) -> dict[str, int]:
-        """Creates a reference dict from the message.
+    @BaseModel.property("embeds", list[EmbedBuilder])
+    def embeds(self, _: GatewayClient, data: list[dict[Any, Any]]) -> list[EmbedBuilder]:
+        return [EmbedBuilder.from_dict(e) for e in data]
 
-        This is used for replies.
+    @BaseModel.property("mentions", list[User])
+    def mentions(self, client: GatewayClient, data: list[dict[Any, Any]]) -> list[User]:
+        return [User.cache.get(user["id"]) or User(client, user) for user in data]
+
+    @BaseModel.property("timestamp", datetime)
+    def timestamp(self, _: GatewayClient, timestamp: str) -> datetime:
+        return datetime.fromisoformat(timestamp)
+
+    @BaseModel.property("editted_at", datetime)
+    def editted_at(self, _: GatewayClient, timestamp: str) -> None | datetime:
+        if timestamp is not None:
+            return datetime.fromisoformat(timestamp)
+
+    def reference(self) -> dict[str, Snowflake]:
+        """Creates a message reference from the instance.
 
         Returns
         -------
         :class:`dict`
-            The created dict for the message.
+            The created dict representing the message's reference.
         """
-        payload = {"message_id": self.id, "channel_id": self.channel.id}
-
-        if self.guild:
-            payload["guild_id"] = self.guild.id
-
-        return payload
+        return {"message_id": self.snowflake}
 
     async def reply(
         self,
         content: None | str = None,
         tts: bool = False,
-        embed: None | EmbedBuilder = None,
         embeds: list[EmbedBuilder] = [],
-        allowed_mentions: None | AllowedMentions = None,
-        rows: list[ActionRowBuilder] = [],
+        files: list[File] = [],
+        rows: list[ActionRow] = [],
+        mentions: AllowedMentions = AllowedMentions(),
     ) -> Message:
-        """Replies to the message.
+        """Sends a message repyling to this message
+        into the channel corresponding to the passed in :class:`.Snowflake`.
 
         Parameters
         ----------
-        content: None | str
-            The content of the reply.
+        content: None | :class:`str`
+            The content to give the message.
 
-        tts: bool
-            If text-to-speech should be used when replying.
-
-        embed: None | :class:`EmbedBuilder`
-            The embed to send with the reply.
+        tts: :class:`bool`
+            If the message should be sent with text-to-speech. Defaults to False.
 
         embeds: :class:`list`
-            A list of embeds to send with the reply. Can only send 10 embeds at a time.
+            A list of :class:`.EmbedBuilder` instances to send with the message.
 
-        allowed_mentions: None | :class:`.AllowedMentions`
-            The allowed mentions of the reply.
+        files: :class:`list`
+            A list of :class:`.File` instances to send with the message.
 
-        rows: :class:`list`
-            A list of :class:`.ActionRow`s to use when sending.
-
-        Raises
-        ------
-        :exc:`.HTTPException`
-            Something went wrong.
+        mentions: :class:`.AllowedMentions`
+            The allowed mentions of the message.
 
         Returns
         -------
         :class:`.Message`
-            The newly created reply as a :class:`.Message` instance.
+            An instance of the newly sent message.
         """
-
-        partial = PartialSender(self.client, self.channel.id)
-        return await partial.send(
-            reply=self,
-            content=content,
-            tts=tts,
-            embed=embed,
-            embeds=embeds,
-            allowed_mentions=allowed_mentions,
-            rows=rows,
-        )
+        sender = self.client.sender(self.channel_id)
+        return await sender.send(content, tts, embeds, files, rows, self, mentions)
 
     async def delete(self) -> None:
         """Deletes the message.
@@ -158,11 +222,11 @@ class Message(Base, Cacheable, max=1000):
             Something went wrong.
         """
         route = Route(
-            f"/channels/{self.channel_id}/messages/{self.id}",
+            f"/channels/{self.channel_id}/messages/{self.snowflake}",
             channel_id=self.channel_id,
         )
 
-        Message.cache.pop(self.id)
+        Message.cache.pop(self.snowflake)
         await self.client.rest.request("DELETE", route)
 
     async def react(self, reaction: str) -> None:
@@ -179,14 +243,14 @@ class Message(Base, Cacheable, max=1000):
             Something went wrong.
         """
         route = Route(
-            f"channels/{self.channel_id}/messages/{self.id}/reactions/{reaction}/@me",
+            f"channels/{self.channel_id}/messages/{self.snowflake}/reactions/{reaction}/@me",
             channel_id=self.channel_id,
         )
 
         await self.client.rest.request("PUT", route)
 
     async def delete_reaction(
-        self, reaction: str, user: None | Snowflake = None
+        self, reaction: str, user: None | User | Snowflake | int = None
     ) -> None:
         """Deletes a reaction from the message.
 
@@ -195,18 +259,21 @@ class Message(Base, Cacheable, max=1000):
         reaction: :class:`str`
             The reaction to delete from the message.
 
-        user: None | :class:`.Snowflake`
-            The user to remove the reaction from. If no user is passed
-            the user will be defaulted to the current authorised user.
+        user: None | :class:`.User` | :class:`.Snowflake` | :class:`int`
+            The user to remove the reaction from.
+            If no user is passed the user will be defaulted to the current authorised user.
 
         Raises
         ------
         :exc:`.HTTPException`
             Something went wrong.
         """
-        path = "@me" if user is None else user.id
+        path = "@me" if user is None else user
+        if isinstance(path, User):
+            path = path.snowflake
+
         route = Route(
-            f"/channels/{self.channel_id}/messages/{self.id}/reactions/{reaction}/{path}"
+            f"/channels/{self.channel_id}/messages/{self.snowflake}/reactions/{reaction}/{path}"
         )
 
         await self.client.rest.request("DELETE", route)
@@ -220,7 +287,8 @@ class Message(Base, Cacheable, max=1000):
             Something went wrong while making the request.
         """
         route = Route(
-            f"channels/{self.channel_id}/pins/{self.id}", channel_id=self.channel_id
+            f"channels/{self.channel_id}/pins/{self.snowflake}",
+            channel_id=self.channel_id,
         )
 
         await self.client.rest.request("PUT", route)
@@ -234,7 +302,8 @@ class Message(Base, Cacheable, max=1000):
             Something went wrong while making the request.
         """
         route = Route(
-            f"channels/{self.channel_id}/pins/{self.id}", channel_id=self.channel_id
+            f"channels/{self.channel_id}/pins/{self.snowflake}",
+            channel_id=self.channel_id,
         )
 
         await self.client.rest.request("DELETE", route)

@@ -15,6 +15,7 @@ class InteractionResponse(enum.IntEnum):
     DERFER_UPDATE = 6
     UPDATE = 7
     AUTOCOMPLETE_RESULT = 8
+    MODAL = 9
 
 
 class InteractionType(enum.IntEnum):
@@ -22,3 +23,4 @@ class InteractionType(enum.IntEnum):
     COMMAND = 2
     COMPONENT = 3
     COMMAND_AUTOCOMPLETE = 4
+    MODAL_SUBMIT = 5

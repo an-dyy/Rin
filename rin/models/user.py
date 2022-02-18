@@ -1,96 +1,132 @@
 from __future__ import annotations
 
+import base64
+
 import attr
+import magic
 
-from .base import Base
+from ..rest import Route
+from .base import BaseModel
 from .cacheable import Cacheable
-
-__all__ = ("User",)
+from .snowflake import Snowflake
 
 
 @attr.s(slots=True)
-class User(Base, Cacheable):
-    """Represents a User.
-
-    .. note::
-        |cacheable|
+class User(BaseModel, Cacheable):
+    """Represents a discord user.
 
     Attributes
     ----------
-    id: :class:`int`
-        The ID of the user.
+    snowflake: :class:`.Snowflake`
+        The snowflake of the user.
+
+    discriminator: :class:`str`
+        The user's discriminator.
 
     username: :class:`str`
         The username of the user.
 
-    discriminator: :class:`str`
-        The discriminator of the user.
-
     avatar: None | :class:`str`
-        The avatar of the user.
+        The avatar hash of the user.
 
     banner: None | :class:`str`
-        The banner of the user.
+        The banner hash of the user.
 
-    color: :class:`int`
+    accent_color: None | :class:`int`
         The accent color of the user.
 
-    locale: None | :class:`str`
-        The locale of the user, E.g `en_US`
+    bot :class:`bool`
+        If the user is a bot user.
+
+    system: :class:`bool`
+        If the user is an offical discord system user.
+
+    mfa_enabled: :class:`bool`
+        If the user has mfa enabled.
+
+    verified: :class:`bool`
+        If the user's email is verified. Given with the email scope.
 
     email: None | :class:`str`
-        The email of the user.
+        The user's email which is connected to the account. Given with the email scope.
+
+    locale: None | :class:`str`
+        The language option of the user. Given with the identify scope.
 
     flags: :class:`int`
-        The flags of the user.
+        The flags of the user's account. Given with the identify scope.
 
     public_flags: :class:`int`
-        The public flags of the user.
+        The public flags on the user's accoumt. Given with the identify scope.
 
     premium: :class:`int`
-        The premium type of the user.
+        The premium type of the user. Given with the identify scope.
     """
 
-    id: int = Base.field(key="id", cls=int, repr=True)
+    snowflake: Snowflake = BaseModel.field("id", Snowflake)
+    discriminator: str = BaseModel.field(None, str)
+    username: str = BaseModel.field(None, str)
 
-    username: str = Base.field(key="username", repr=True)
-    discriminator: str = Base.field(key="discriminator", repr=True)
+    avatar: None | str = BaseModel.field(None, str)
+    banner: None | str = BaseModel.field(None, str)
+    accent_color: None | int = BaseModel.field(None, int)
 
-    avatar: None | str = Base.field(key="avatar")
-    banner: None | str = Base.field(key="banner")
-    color: None | int = Base.field(key="color", cls=int)
+    bot: bool = BaseModel.field(None, bool, default=False)
+    system: bool = BaseModel.field(None, bool, default=False)
+    mfa_enabled: bool = BaseModel.field(None, bool, default=False)
+    verified: bool = BaseModel.field(None, bool, default=False)
 
-    locale: None | str = Base.field(key="locale")
-    email: None | str = Base.field(key="locale")
+    email: None | str = BaseModel.field(None, str)
+    locale: None | str = BaseModel.field(None, str)
 
-    flags: int = Base.field(key="flags", default=0, cls=int)
-    public_flags: int = Base.field(key="public_flags", default=0, cls=int)
-    premium: int = Base.field(key="premium_type", default=0, cls=int)
+    flags: int = BaseModel.field(None, int, default=0)
+    public_flags: int = BaseModel.field(None, int, default=0)
+    premium: int = BaseModel.field("premium_type", int, default=0)
 
-    def __str__(self) -> str:
-        return f"{self.username}#{self.discriminator}"
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+        User.cache.set(self.snowflake, self)
 
-    @property
-    def mention(self) -> str:
-        """The mention string to the user."""
-        return f"<@{self.id}>"
+    async def edit(
+        self, username: str | None = None, avatar: None | bytes = None
+    ) -> User:
+        """Edits the current authorized user.
 
-    @property
-    def bot(self) -> bool:
-        """If the user is a bot."""
-        return self.data.get("bot", False)
+        Parameters
+        ----------
+        username: None | :class:`str`
+            The new username to give the user.
 
-    @property
-    def system(self) -> bool:
-        """If the user is a system user."""
-        return self.data.get("system", False)
+        avatar: None | :class:`bytes`
+            The new avatar to give the user.
 
-    @property
-    def mfa_enabled(self) -> bool:
-        """If the user has 2fa enabled."""
-        return self.data.get("mfa_enabled", False)
+        Raises
+        ------
+        :exc:`HTTPException`
+            Something went wrong.
 
-    @property
-    def verified(self) -> bool:
-        """If the user is verified or not."""
-        return self.data.get("verified") or False
+        Returns
+        -------
+        :class:`.User`
+            The user after editting is finished.
+        """
+        if self.client.user is self:
+            payload = {}
+
+            if username is not None:
+                payload["username"] = username
+
+            if avatar is not None:
+                mime = magic.from_buffer(avatar, mime=True)
+                payload[
+                    "avatar"
+                ] = f"data:{mime};base64,{base64.b64encode(avatar).decode('ascii')}"
+
+            self.data = await self.client.rest.request(
+                "PATCH", Route("users/@me"), json=payload
+            )
+
+            self.username = username if username is not None else self.username
+            self.avatar = self.data.get("avatar") or self.avatar
+
+        return self

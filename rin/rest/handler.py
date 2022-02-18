@@ -71,7 +71,7 @@ class Route:
     """
 
     endpoint: str = attr.field()
-    version: int = attr.field(kw_only=True, default=9)
+    version: int = attr.field(kw_only=True, default=10)
 
     channel_id: None | int = attr.field(kw_only=True, default=None)
     guild_id: None | int = attr.field(kw_only=True, default=None)
@@ -142,9 +142,7 @@ class RESTClient:
     session: aiohttp.ClientSession = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
-        self.semaphores: dict[str, asyncio.Semaphore] = {
-            "global": asyncio.Semaphore(50)
-        }
+        self.semaphores: dict[str, asyncio.Semaphore] = {"global": asyncio.Semaphore(50)}
 
     async def _create_session(self) -> aiohttp.ClientSession:
         if hasattr(self, "session"):
@@ -181,7 +179,7 @@ class RESTClient:
         return await self.session.request(  # type: ignore
             method,
             endpoint,
-            headers={"Authorization": f"Bot {self.token}"},
+            headers=kwargs.pop("headers", {"Authorization": f"Bot {self.token}"}),
             **kwargs,
         )
 
