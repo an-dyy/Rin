@@ -63,6 +63,12 @@ if TYPE_CHECKING:
         inline: bool
 
 
+class EmbedItem:
+    def __init__(self, **kwargs: Any) -> None:
+        self.data = kwargs
+        self.__dict__.update(kwargs)
+
+
 __all__ = ("EmbedBuilder",)
 
 
@@ -234,7 +240,7 @@ class EmbedBuilder:
         icon_url: None | :class:`str`
             The icon url of the footer
         """
-        self.data["footer"] = EmbedFooter(text=text, icon_url=icon_url)
+        self.data["footer"] = EmbedItem(text=text, icon_url=icon_url)
 
     @property
     def image(self) -> None | EmbedImage:
@@ -257,7 +263,7 @@ class EmbedBuilder:
         width: None | :class:`int`
             The width of the image.
         """
-        self.data["image"] = EmbedImage(url=url, height=height, width=width)
+        self.data["image"] = EmbedItem(url=url, height=height, width=width)
 
     @property
     def thumbnail(self) -> None | EmbedThumbnail:
@@ -280,7 +286,7 @@ class EmbedBuilder:
         width: None | :class:`int`
             The width of the thumbnail.
         """
-        self.data["thumbnail"] = EmbedThumbnail(url=url, height=height, width=width)
+        self.data["thumbnail"] = EmbedItem(url=url, height=height, width=width)
 
     @property
     def video(self) -> None | EmbedVideo:
@@ -303,7 +309,7 @@ class EmbedBuilder:
         width: None | :class:`int`
             The width of the video.
         """
-        self.data["thumbnail"] = EmbedVideo(url=url, height=height, width=width)
+        self.data["thumbnail"] = EmbedItem(url=url, height=height, width=width)
 
     @property
     def provider(self) -> None | EmbedProvider:
@@ -321,7 +327,7 @@ class EmbedBuilder:
         url: None | :class:`str`
             The url of the provider.
         """
-        self.data["provider"] = EmbedProvider(name=name, url=url)
+        self.data["provider"] = EmbedItem(name=name, url=url)
 
     @property
     def author(self) -> None | EmbedAuthor:
@@ -344,7 +350,7 @@ class EmbedBuilder:
         icon_url: None | :class:`str`
             The icon url of the author.
         """
-        self.data["author"] = EmbedAuthor(name=name, url=url, icon_url=icon_url)
+        self.data["author"] = EmbedItem(name=name, url=url, icon_url=icon_url)
 
     @property
     def fields(self) -> None | list[EmbedField]:
@@ -366,5 +372,5 @@ class EmbedBuilder:
             Whether or not the field is inline
         """
         self.data.setdefault("fields", []).append(
-            EmbedField(name=name, value=value, inline=inline)
+            EmbedItem(name=name, value=value, inline=inline)
         )
