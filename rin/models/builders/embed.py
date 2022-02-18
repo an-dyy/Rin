@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -13,58 +13,54 @@ class _EmbedItem(Protocol):
         self.__dict__.update(kwargs)
 
 
-class EmbedFooter(_EmbedItem):
-    data: dict[Any, Any]
+if TYPE_CHECKING:
 
-    text: str
-    icon_url: None | str
+    class EmbedFooter(_EmbedItem):
+        data: dict[Any, Any]
 
+        text: str
+        icon_url: None | str
 
-class EmbedAuthor(_EmbedItem):
-    data: dict[Any, Any]
+    class EmbedAuthor(_EmbedItem):
+        data: dict[Any, Any]
 
-    name: str
-    url: None | str
-    icon_url: None | str
+        name: str
+        url: None | str
+        icon_url: None | str
 
+    class EmbedProvider(_EmbedItem):
+        data: dict[Any, Any]
 
-class EmbedProvider(_EmbedItem):
-    data: dict[Any, Any]
+        name: None | str
+        url: None | str
 
-    name: None | str
-    url: None | str
+    class EmbedVideo(_EmbedItem):
+        data: dict[Any, Any]
 
+        url: str
+        height: None | int
+        width: None | int
 
-class EmbedVideo(_EmbedItem):
-    data: dict[Any, Any]
+    class EmbedImage(_EmbedItem):
+        data: dict[Any, Any]
 
-    url: str
-    height: None | int
-    width: None | int
+        url: str
+        height: None | int
+        width: None | int
 
+    class EmbedThumbnail(_EmbedItem):
+        data: dict[Any, Any]
 
-class EmbedImage(_EmbedItem):
-    data: dict[Any, Any]
+        url: str
+        height: None | int
+        width: None | int
 
-    url: str
-    height: None | int
-    width: None | int
+    class EmbedField(_EmbedItem):
+        data: dict[Any, Any]
 
-
-class EmbedThumbnail(_EmbedItem):
-    data: dict[Any, Any]
-
-    url: str
-    height: None | int
-    width: None | int
-
-
-class EmbedField(_EmbedItem):
-    data: dict[Any, Any]
-
-    name: str
-    value: str
-    inline: bool
+        name: str
+        value: str
+        inline: bool
 
 
 __all__ = ("EmbedBuilder",)
