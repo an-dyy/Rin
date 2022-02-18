@@ -8,7 +8,7 @@ from ...rest import Route
 from ..assets import File
 from ..base import BaseModel
 from ..builders import EmbedBuilder
-from ..message import ActionRow, AllowedMentions, Message
+from ..message import ActionRow, AllowedMentions, Message, Modal
 from ..snowflake import Snowflake
 from ..user import User
 from .types import InteractionResponse, InteractionType
@@ -83,6 +83,14 @@ class Interaction(BaseModel):
     @BaseModel.property("type", InteractionType)
     def type(self, _: GatewayClient, data: int) -> InteractionType:
         return InteractionType(data)
+
+    async def modal(self, modal: Modal) -> None:
+        inter = {"type": InteractionResponse.MODAL, "data": modal.to_dict()}
+        await self.client.rest.request(
+            "POST",
+            Route(f"interactions/{self.snowflake}/{self.token}/callback"),
+            json=inter,
+        )
 
     async def send(
         self,

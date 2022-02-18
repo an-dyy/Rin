@@ -64,10 +64,16 @@ class Parser:
         interaction = Interaction(self.client, data)
 
         if interaction.type is InteractionType.COMPONENT:
-            if component := ComponentCache.cache.get(
-                interaction.actual_data["custom_id"]
-            ):
+            custom_id = interaction.actual_data["custom_id"]
+
+            if component := ComponentCache.cache.get(custom_id):
                 await component.callback(interaction, component)
+
+        elif interaction.type is InteractionType.MODAL_SUBMIT:
+            text = interaction.actual_data["components"][0]["components"][0]
+
+            if component := ComponentCache.cache.get(text["custom_id"]):
+                await component.callback(interaction, text["value"])
 
         self.client.dispatch(Events.INTERACTION_CREATE, interaction)
 
