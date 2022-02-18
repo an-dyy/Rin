@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 from uuid import uuid4
 
 import attr
@@ -48,9 +48,10 @@ class Modal(metaclass=ModalMeta):
 
     title: str = attr.field()
     custom_id: str = attr.field(default=uuid4().hex)
-    components: list[TextInput] = attr.field(default=cast(list[TextInput], []))
+    components: list[TextInput] = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
+        self.components = []
         self.add(*self.__components__)
 
     def add(self, *components: TextInput) -> None:

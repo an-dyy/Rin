@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import attr
 from typing_extensions import Self
@@ -86,9 +86,10 @@ class ActionRow(metaclass=ActionRowMeta):
     __components__: list[Component] = attr.field(init=False)
 
     type: ComponentType = attr.field(init=False, default=ComponentType.ACTIONROW)
-    components: list[Component] = attr.field(default=cast(list[Component], []))
+    components: list[Component] = attr.field(init=False)
 
     def __attrs_post_init__(self) -> None:
+        self.components = []
         self.add(*self.__components__)
 
     def add(self, *components: Component) -> None:
