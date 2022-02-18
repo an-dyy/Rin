@@ -71,7 +71,7 @@ class Route:
     """
 
     endpoint: str = attr.field()
-    version: int = attr.field(kw_only=True, default=9)
+    version: int = attr.field(kw_only=True, default=10)
 
     channel_id: None | int = attr.field(kw_only=True, default=None)
     guild_id: None | int = attr.field(kw_only=True, default=None)
