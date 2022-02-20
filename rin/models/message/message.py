@@ -12,6 +12,7 @@ from ..builders import EmbedBuilder
 from ..cacheable import Cacheable
 from ..snowflake import Snowflake
 from ..user import User
+from ..guild import Member
 from .mentions import AllowedMentions
 from .types import MessageType
 
@@ -120,7 +121,7 @@ class Message(BaseModel, Cacheable, max=1000):
     application_id: None | Snowflake = BaseModel.field(None, Snowflake)
 
     user: User = BaseModel.field("author", User)
-    member: dict[Any, Any] = BaseModel.field(None, dict)
+    member: Member = BaseModel.field(None, Member)
 
     content: str = BaseModel.field(None, str)
     tts: bool = BaseModel.field(None, bool)

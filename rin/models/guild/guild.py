@@ -14,7 +14,9 @@ from .role import Role
 from .types import MFALevel, VerificationLevel
 
 if TYPE_CHECKING:
+    from .member import Member
     from ...client import GatewayClient
+    from ...typings import ChunkPayload
 
 
 @attr.s(slots=True)
@@ -118,8 +120,32 @@ class Guild(BaseModel, Cacheable):
     member_count: int = BaseModel.field(None, int, default=0, repr=True)
 
     def __attrs_post_init__(self) -> None:
+        self.members: list[Member] = []
+
         super().__attrs_post_init__()
         Guild.cache.set(self.snowflake, self)
+
+    async def chunk(
+        self,
+        query: str = "",
+        limit: int = 0,
+        presences: bool = False,
+        user_ids: int | list[int] = [],
+        nonce: None | str = None,
+    ) -> None:
+        payload: ChunkPayload = {
+            "op": 8,
+            "d": {
+                "guild_id": self.snowflake,
+                "query": query,
+                "limit": limit,
+                "presences": presences,
+                "user_ids": user_ids,
+                "nonce": nonce,
+            },
+        }
+
+        await self.client.gateway.send(payload)
 
     @BaseModel.property("mfa_level", MFALevel)
     def mfa_level(self, _: GatewayClient, data: int) -> MFALevel:

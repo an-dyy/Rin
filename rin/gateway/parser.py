@@ -4,7 +4,15 @@ from typing import TYPE_CHECKING, Any
 
 import attr
 
-from ..models import ComponentCache, Guild, Interaction, InteractionType, Message, User
+from ..models import (
+    ComponentCache,
+    Guild,
+    Interaction,
+    InteractionType,
+    Message,
+    User,
+    Member,
+)
 from .event import Event, Events
 
 if TYPE_CHECKING:
@@ -97,4 +105,29 @@ class Parser:
         data: :class:`dict`
             The data from the event.
         """
-        self.client.dispatch(Events.GUILD_CREATE, Guild(self.client, data))
+        guild = Guild(self.client, data)
+        intents = self.client.intents
+
+        if intents.guild_members is True and intents.guild_presences is False:
+            if self.client.no_chunk is not True:
+                await guild.chunk()
+
+        self.client.dispatch(Events.GUILD_CREATE, guild)
+
+    async def parse_guild_members_chunk(self, data: dict[Any, Any]) -> None:
+        """Parses the `GUILD_MEMBERS_CHUNK` event.
+        Dispatches a :class:`list` object with the members inside.
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data from the event.
+        """
+        members = [Member(self.client, member_data) for member_data in data["members"]]
+        if guild := Guild.cache.get(int(data["guild_id"])):
+            guild.members = members
+
+            for member in members:
+                member.guild = guild
+
+        self.client.dispatch(Events.GUILD_MEMBERS_CHUNK, members)
