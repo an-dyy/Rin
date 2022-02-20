@@ -177,8 +177,8 @@ class Gateway:
                 "intents": self.intents.value,
                 "properties": {
                     "$os": "",
-                    "$browser": "Rin 0.1.0-alpha",
-                    "$device": "Rin 0.1.0-alpha",
+                    "$browser": "Rin 0.1.2-alpha",
+                    "$device": "Rin 0.1.2-alpha",
                 },
             },
         }

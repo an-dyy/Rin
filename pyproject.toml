@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rin"
-version = "0.1.1"
+version = "0.1.2"
 description = "A successor to the Lefi project"
 authors = ["an-dyy <andy.development@protonmail.com>"]
 license = "MIT"
