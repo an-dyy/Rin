@@ -15,7 +15,6 @@ class TestRESTClient:
         return rin.RESTClient("DISCORD_TOKEN", rin.GatewayClient("DISCORD_TOKEN"))
 
     def test_attributes(self, rest: rin.RESTClient) -> None:
-        assert rest.__class__.GATEWAY_TYPE is rin.Gateway
         assert rest.__class__.ERRORS == {
             400: rin.BadRequest,
             401: rin.Unauthorized,
