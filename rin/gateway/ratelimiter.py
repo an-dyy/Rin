@@ -23,5 +23,7 @@ class Ratelimiter:
         return self
 
     async def __aexit__(self, *_: Any) -> None:
-        await asyncio.sleep(self.per)
-        self.semaphore.release()
+        try:
+            await asyncio.sleep(self.per)
+        finally:
+            self.semaphore.release()
