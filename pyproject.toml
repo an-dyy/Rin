@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rin"
-version = "0.1.2"
+version = "0.2.0"
 description = "A successor to the Lefi project"
 authors = ["an-dyy <andy.development@protonmail.com>"]
 license = "MIT"
@@ -14,27 +14,21 @@ packages = [{include = "rin"}]
 python = "^3.9"
 aiohttp = "^3.8.1"
 typing-extensions = "^4.0.1"
-python-magic = "^0.4.25"
 
 [tool.poetry.dev-dependencies]
-mypy = "^0.931"
 black = "^21.12b0"
 flake8 = "^4.0.1"
 pre-commit = "^2.16.0"
 isort = "^5.10.1"
 pytest = "^6.2.5"
 pytest-asyncio = "^0.17.0"
-Sphinx = "^4.3.2"
-furo = "^2022.1.2"
 pytest-cov = "^3.0.0"
 
 [tool.black]
 line-length = 90
 
-[tool.mypy]
-ignore_missing_imports = true
-strict = true
-implicit_reexport = true
+[tool.isort]
+profile = "black"
 
 [tool.pyright]
 typeCheckingMode = "strict"
@@ -42,10 +36,6 @@ reportImportCycles = false
 reportPrivateUsage = false
 reportUnnecessaryIsInstance = false
 reportIncompatibleMethodOverride = false
-ignore = ["examples/"]
-
-[tool.isort]
-profile = "black"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

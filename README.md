@@ -39,5 +39,4 @@ pip install -U rin
 
 ## Notable contributors
 
-- [blanketsucks](https://github.com/blanketsucks) - collaborator
 - [an-dyy](https://github.com/an-dyy) - creator and maintainer
