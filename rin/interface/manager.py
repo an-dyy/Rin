@@ -53,6 +53,11 @@ class EventManager:
     def __attrs_post_init__(self) -> None:
         self.emitter = EventEmitter(self.loop)
 
+    async def parse(self, event: Events, data: dict[str, Any]) -> None:
+
+        if parser := PARSERS.get(event):
+            await parser(self, data)
+
     def emit(self, event: Events, *args: Any, **kwargs: Any) -> None:
         """Calls the emitter.
 
@@ -69,3 +74,7 @@ class EventManager:
 
         """
         self.emitter.emit(event, *args, **kwargs)
+
+    @parses(Events.READY)
+    async def ready(self, _: dict[str, Any]) -> None:
+        self.emit(Events.READY, "Rin!")

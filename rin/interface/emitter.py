@@ -130,7 +130,21 @@ class EventEmitter:
         return listener
 
     def emit(self, event: Events, *args: Any, **kwargs: Any) -> None:
-        logger.info(f"EMITTING {event} W/ {args} | {kwargs}")
+        """Emit an event.
+
+        Parameters
+        ----------
+        event: :class:`Events`
+            The event to emit.
+
+        args: :class:`Any`
+            The arguments to pass to the listeners.
+
+        kwargs: :class:`Any`
+            The keyword arguments to pass to the listeners.
+        """
+        logger.info(f"EMITTING {event}")
+
         for index, listener in enumerate(self.listeners[event][:]):
             self.loop.create_task(listener(*args, **kwargs))
 

@@ -14,7 +14,10 @@ class Events(enum.Enum):
     def __str__(self) -> str:
         return self.name
 
+    UNKNOWN = enum.auto()
+
     HELLO = enum.auto()
+    HEARTBEAT = enum.auto()
     READY = enum.auto()
     RESUMED = enum.auto()
     RECONNECT = enum.auto()
