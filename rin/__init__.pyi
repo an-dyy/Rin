@@ -1,3 +1,4 @@
+from rin.client import *
 from rin.gateway import *
 from rin.interface import *
 from rin.models import *

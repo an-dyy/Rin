@@ -3,12 +3,15 @@ from __future__ import annotations
 import asyncio
 import random
 import sys
-from typing import Any, Callable, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 
 from aiohttp import ClientWebSocketResponse, WSMsgType
 from loguru import logger
 
 from ..interface import EventEmitter, EventManager, Events
+
+if TYPE_CHECKING:
+    from ..client import GatewayClient
 
 __all__ = ["Gateway"]
 
@@ -74,19 +77,35 @@ class Gateway(ClientWebSocketResponse):
 
     @property
     def jitter(self) -> float:
+        """The jitter for the heartbeat."""
         return random.random() * self.interval
 
-    def setup(self, intents: int, token: str) -> None:
+    def setup(self, client: GatewayClient, intents: int, token: str) -> None:
+        """Setup the gateway client.
+
+        Parameters
+        ----------
+        client: :class:`GatewayClient`
+            The client to use.
+
+        intents: :class:`int`
+            The intents to use.
+
+        token: :class:`str`
+            The token to use.
+        """
         logger.info("SETTING UP WEBSOCKET ATTRIBUTES")
 
         self.loop = asyncio.get_running_loop()
-        self.manager = EventManager(self.loop)
+        self.manager = EventManager(client, self.loop)
         self.emitter = self.manager.emitter
 
         self.intents = intents
         self.token = token
+        self.client = client
 
     async def start(self) -> None:
+        """Start the gateway client."""
         logger.info("STARTING WEBSOCKET")
 
         startup = await self.receive_json()
@@ -97,6 +116,7 @@ class Gateway(ClientWebSocketResponse):
         await self.reader()
 
     async def reader(self) -> None:
+        """The reader for the gateway client."""
         logger.info("STARTED WEBSOCKET READER")
 
         async for message in self:
@@ -116,6 +136,14 @@ class Gateway(ClientWebSocketResponse):
             await self.dispatch(inbound)
 
     async def dispatch(self, data: dict[str, Any]) -> None:
+        """Dispatch the data to the event manager.
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The data to dispatch.
+        """
+
         event = getattr(Events, data["t"], Events.UNKNOWN)
         code = data.get("op")
 
@@ -134,6 +162,8 @@ class Gateway(ClientWebSocketResponse):
         await self.manager.parse(event, data)
 
     def start_ping(self) -> None:
+        """Start the heartbeat."""
+
         async def loop() -> None:
             if not self.closed:
                 await self.send_ping()
@@ -144,9 +174,11 @@ class Gateway(ClientWebSocketResponse):
         self.loop.create_task(loop())
 
     async def send_ping(self) -> None:
+        """Send a heartbeat."""
         await self.send_json({"op": 1, "d": self.sequence})
 
     async def send_identity(self) -> None:
+        """Send the identity."""
         logger.info("SENDING IDENTITY")
 
         payload = {
@@ -165,6 +197,7 @@ class Gateway(ClientWebSocketResponse):
         await self.send_json(payload)
 
     async def send_resume(self) -> None:
+        """Send the resume."""
         logger.info("SENDING RESUME")
 
         payload = {

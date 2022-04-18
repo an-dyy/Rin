@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from attrs import define, field
 from loguru import logger
 
 from .emitter import EventEmitter
 from .events import Events
+
+if TYPE_CHECKING:
+    from ..client import GatewayClient
 
 __all__ = ["PARSERS", "EventManager", "parses"]
 
@@ -47,13 +50,25 @@ class EventManager:
         The event loop to use.
     """
 
+    client: GatewayClient = field()
     loop: asyncio.AbstractEventLoop = field()
+
     emitter: EventEmitter = field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.emitter = EventEmitter(self.loop)
 
     async def parse(self, event: Events, data: dict[str, Any]) -> None:
+        """Parses the event.
+
+        Parameters
+        ----------
+        event: :class:`.Events`
+            The event to parse.
+
+        data: :class:`dict`
+            The data to parse.
+        """
 
         if parser := PARSERS.get(event):
             await parser(self, data)
@@ -76,5 +91,13 @@ class EventManager:
         self.emitter.emit(event, *args, **kwargs)
 
     @parses(Events.READY)
-    async def ready(self, _: dict[str, Any]) -> None:
-        self.emit(Events.READY, "Rin!")
+    async def ready(self, data: dict[str, Any]) -> None:
+        self.emit(Events.READY, data)
+
+    @parses(Events.GUILD_CREATE)
+    async def guild_create(self, data: dict[str, Any]) -> None:
+        self.emit(Events.GUILD_CREATE, data)
+
+    @parses(Events.MESSAGE_CREATE)
+    async def message_create(self, data: dict[str, Any]) -> None:
+        self.emit(Events.MESSAGE_CREATE, data)
