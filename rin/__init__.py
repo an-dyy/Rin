@@ -4,11 +4,7 @@ __version__ = "0.2.0-alpha"
 
 from typing import Literal, NamedTuple
 
-from .client import *
-from .gateway import *
-from .interface import *
-from .models import *
-from .rest import *
+__all__ = ("version",)
 
 
 class Version(NamedTuple):
@@ -19,4 +15,4 @@ class Version(NamedTuple):
     id: Literal["alpha", "beta", "final"]
 
 
-version = Version(0, 2, 0, "alpha")
+version = Version(0, 3, 0, "alpha")
