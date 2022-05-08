@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from logging import DEBUG, Formatter, Logger, LogRecord, StreamHandler, getLogger
 from typing import Any, ClassVar
+from logging import StreamHandler, LogRecord, Formatter, DEBUG, getLogger, Logger
 
 __all__ = ["ColouredStreamHandler", "create"]
 
