@@ -31,10 +31,12 @@ line-length = 88
 profile = "black"
 
 [tool.pyright]
-ignore = ["rin/logger.py", "tests/"]
 typeCheckingMode = "strict"
 reportImportCycles = false
 reportPrivateUsage = false
+reportUnnecessaryIsInstance = false
+reportIncompatibleMethodOverride = false
+ignore = ["rin/logger.py"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
